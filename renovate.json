@@ -4,5 +4,12 @@
     "config:recommended",
     ":disableDependencyDashboard",
     ":rebaseStalePrs"
+  ],
+  "packageRules": [
+    {
+      "packageNames": ["gemmi"],
+      "enabled": false,
+      "recreateWhen": never
+    }
   ]
 }
