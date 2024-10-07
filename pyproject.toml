@@ -11,7 +11,7 @@ torch = "^2.4.1"
 numpy = "^2.1.1"
 lightning = "^2.4.0"
 reciprocalspaceship = "^1.0.2"
-gemmi = "0.6.6"
+gemmi = "0.6.7"
 
 
 [tool.poetry.group.dev.dependencies]
