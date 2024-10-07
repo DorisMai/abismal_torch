@@ -18,4 +18,4 @@ documentation for details.
 ``myinitconfigtest`` API reference
 ==================================
 .. automodule:: abismal.simple_matmul
-   :members: 
+   :members:
