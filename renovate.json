@@ -9,7 +9,7 @@
     {
       "packageNames": ["gemmi"],
       "enabled": false,
-      "recreateWhen": never
+      "recreateWhen": "never"
     }
   ]
 }
