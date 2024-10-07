@@ -1,0 +1,3 @@
+[run]
+source = test_abismal_torch
+concurrency = multiprocessing
