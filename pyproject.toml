@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "test-abismal-torch"
+name = "abismal-torch"
 version = "0.1.0"
 description = ""
 authors = ["DorisMai <maihuanghao@gmail.com>"]

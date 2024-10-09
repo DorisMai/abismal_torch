@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'test-torch'
+project = 'abismal-torch'
 copyright = '2024, Doris Mai'
 author = 'SLAC-LCLS-MLCV'
 release = '0.1.0'

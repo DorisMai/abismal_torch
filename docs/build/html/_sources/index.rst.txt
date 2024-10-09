@@ -17,5 +17,5 @@ documentation for details.
 
 ``myinitconfigtest`` API reference
 ==================================
-.. automodule:: abismal.simple_matmul
+.. automodule:: abismal_torch.simple_matmul
    :members:

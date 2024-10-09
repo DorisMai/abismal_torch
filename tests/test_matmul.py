@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from test_abismal_torch.simple_matmul import matmul_and_addone
+from abismal_torch.simple_matmul import matmul_and_addone
 
 
 def test_matmul_func():
