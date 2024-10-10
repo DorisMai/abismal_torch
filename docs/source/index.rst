@@ -15,7 +15,12 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
-``myinitconfigtest`` API reference
+``mypackage`` API reference
 ==================================
 .. automodule:: abismal_torch.simple_matmul
    :members:
+
+Symmetry
+--------
+.. automodule:: abismal_torch.symmetry.op
+  :members:
