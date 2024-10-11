@@ -1,0 +1,4 @@
+abismal_torch.likelihood.normal
+===============================
+
+.. py:module:: abismal_torch.likelihood.normal

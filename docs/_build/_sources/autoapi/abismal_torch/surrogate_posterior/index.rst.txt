@@ -1,0 +1,4 @@
+abismal_torch.surrogate_posterior
+=================================
+
+.. py:module:: abismal_torch.surrogate_posterior

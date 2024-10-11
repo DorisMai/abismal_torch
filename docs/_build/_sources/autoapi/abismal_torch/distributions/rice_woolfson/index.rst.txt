@@ -1,0 +1,4 @@
+abismal_torch.distributions.rice_woolfson
+=========================================
+
+.. py:module:: abismal_torch.distributions.rice_woolfson

@@ -12,9 +12,9 @@ def test_op_construction(op_triplet):
     op1 = Op(op_triplet)
     op2 = Op.from_gemmi(gemmi_op)
     assert op1.to_gemmi() == op2.to_gemmi()
-    assert op1.identity == op2.identity
+    assert op1._identity == op2._identity
     if op_triplet == "x,y,z":
-        assert Op(op_triplet).identity
+        assert Op(op_triplet)._identity
 
 
 @pytest.mark.parametrize("op_triplet", ["x,y,z", "-y,x-y,z+1/3"])

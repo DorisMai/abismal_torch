@@ -21,6 +21,7 @@ pytest = "^8.3.3"
 sphinx = "^8.0.2"
 pytest-cov = "^5.0.0"
 pre-commit = "^4.0.0"
+sphinx-autoapi = "^3.3.2"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,0 +1,67 @@
+abismal_torch.symmetry
+======================
+
+.. py:module:: abismal_torch.symmetry
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/abismal_torch/symmetry/op/index
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   abismal_torch.symmetry.Op
+
+
+Package Contents
+----------------
+
+.. py:class:: Op(op, device = None)
+
+   Bases: :py:obj:`torch.nn.Module`
+
+
+   A torch module that wraps a gemmi.Op object and
+   applies it to a tensor of hkl indices.
+
+
+   .. py:attribute:: dtype
+
+
+   .. py:attribute:: __gemmi_op__
+
+
+   .. py:attribute:: rot
+
+
+   .. py:attribute:: den
+
+
+   .. py:attribute:: identity
+
+
+   .. py:method:: __str__()
+
+
+   .. py:method:: forward(hkl)
+
+
+   .. py:method:: to_gemmi()
+
+      Return the gemmi.Op object.
+
+
+
+   .. py:method:: from_gemmi(op)
+      :classmethod:
+
+
+      Alternative constructor from a gemmi.Op object.
