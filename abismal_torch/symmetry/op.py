@@ -1,29 +1,21 @@
-from typing import Optional, Self
+from typing import Optional
 
 import gemmi
 import torch
 
 
 class Op(torch.nn.Module):
-    """
-    Torch wrapping of a gemmi.Op object. It can be applied to a
-    tensor of Miller indices of size 3.
+    """Torch wrapping of a gemmi.Op object. It can be applied to a tensor
+    of Miller indices of size 3.
 
-    Parameters
-    ----------
-    op : str
-        The triplet of the operator, e.g. "x,-y,z+1/3".
-    device : str, optional
-        The device where the tensor is stored.
+    Args:
+        op (str): The triplet of the operator, e.g. "x,-y,z+1/3".
+        device (str, optional): The device where the tensor is stored.
 
-    Attributes
-    ----------
-    _rot : torch.nn.Parameter
-        The rotation matrix of the operator.
-    _den : torch.nn.Parameter
-        The denominator of the operator.
-    _identity : bool
-        Whether the operator is the identity.
+    Attributes:
+        _rot (torch.nn.Parameter): The rotation matrix of the operator.
+        _den (torch.nn.Parameter): The denominator of the operator.
+        _identity (bool): Whether the operator is the identity.
     """
 
     def __init__(self, op: str, device: Optional[str] = None) -> None:
@@ -57,14 +49,17 @@ class Op(torch.nn.Module):
         return hkl
 
     def to_gemmi(self) -> gemmi.Op:
-        """
-        Returns the gemmi.Op object.
-        """
+        """Returns the gemmi.Op object."""
         return self.__gemmi_op__
 
     @classmethod
-    def from_gemmi(cls, op) -> Self:
-        """
-        An alternative constructor from a gemmi.Op object.
+    def from_gemmi(cls, op):
+        """An alternative constructor from a gemmi.Op object.
+
+        Args:
+            op ("gemmi.Oooop"): The gemmi.Op object.
+
+        Returns:
+            Op: The torch-wrapped operator.
         """
         return cls(op.triplet())

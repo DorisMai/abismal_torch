@@ -1,27 +1,26 @@
 [tool.poetry]
 name = "abismal-torch"
 version = "0.1.0"
-description = ""
+description = "Example template for developing custom Python package."
 authors = ["DorisMai <maihuanghao@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
-torch = "^2.4.1"
-numpy = "^2.1.1"
+python = "^3.10"
+torch = "^2.2.0"
+numpy = "^2.0.0"
 lightning = "^2.4.0"
-reciprocalspaceship = "^1.0.2"
-gemmi = "0.6.6"
-
+gemmi = ">=0.5.5,<=0.6.6"
+reciprocalspaceship = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.8.0"
 isort = "^5.13.2"
 pytest = "^8.3.3"
-sphinx = "^8.0.2"
 pytest-cov = "^5.0.0"
 pre-commit = "^4.0.0"
-sphinx-autoapi = "^3.3.2"
+mkdocs = "^1.6.1"
+mkdocstrings-python = "^1.12.1"
 
 [build-system]
 requires = ["poetry-core"]
