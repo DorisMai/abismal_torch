@@ -3,7 +3,7 @@ name: Publish to TestPyPI
 on:
   push:
     tags:
-      - '*.*.*'
+      - 'v*.*.*[a-z]*[0-9]*'
 
 jobs:
   deploy:
