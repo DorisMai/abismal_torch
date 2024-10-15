@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Community Support
+    url: https://github.com/orgs/community/discussions
+    about: Please ask and answer questions here.
+  - name: GitHub Security Bug Bounty
+    url: https://bounty.github.com/
+    about: Please report security vulnerabilities here.
+issues:
+  - name: Bug Report or Help Needed
+    about: File an issue to help us improve
+    template: bug_report_or_help_needed.md
+    title: "[Issue]: "
+  - name: Feature Request
+    about: Suggest an idea for this project
+    template: feature_request.md
+    title: "[Feature]: "
