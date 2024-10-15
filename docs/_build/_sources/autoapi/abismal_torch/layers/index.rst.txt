@@ -1,4 +1,0 @@
-abismal_torch.layers
-====================
-
-.. py:module:: abismal_torch.layers

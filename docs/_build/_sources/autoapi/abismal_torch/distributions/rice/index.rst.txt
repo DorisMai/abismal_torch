@@ -1,4 +1,0 @@
-abismal_torch.distributions.rice
-================================
-
-.. py:module:: abismal_torch.distributions.rice

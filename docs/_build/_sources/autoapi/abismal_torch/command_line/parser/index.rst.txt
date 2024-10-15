@@ -1,4 +1,0 @@
-abismal_torch.command_line.parser
-=================================
-
-.. py:module:: abismal_torch.command_line.parser

@@ -1,4 +1,0 @@
-abismal_torch.distributions.folded_normal
-=========================================
-
-.. py:module:: abismal_torch.distributions.folded_normal

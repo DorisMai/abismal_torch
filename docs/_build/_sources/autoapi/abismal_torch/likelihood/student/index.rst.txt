@@ -1,4 +1,0 @@
-abismal_torch.likelihood.student
-================================
-
-.. py:module:: abismal_torch.likelihood.student

@@ -1,4 +1,0 @@
-abismal_torch.callbacks.phenix
-==============================
-
-.. py:module:: abismal_torch.callbacks.phenix

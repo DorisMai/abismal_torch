@@ -1,4 +1,0 @@
-abismal_torch.callbacks.peak_finder
-===================================
-
-.. py:module:: abismal_torch.callbacks.peak_finder

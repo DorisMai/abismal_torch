@@ -1,4 +1,0 @@
-abismal_torch.likelihood.laplace
-================================
-
-.. py:module:: abismal_torch.likelihood.laplace

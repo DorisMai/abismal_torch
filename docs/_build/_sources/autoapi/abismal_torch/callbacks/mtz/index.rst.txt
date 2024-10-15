@@ -1,4 +1,0 @@
-abismal_torch.callbacks.mtz
-===========================
-
-.. py:module:: abismal_torch.callbacks.mtz

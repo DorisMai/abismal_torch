@@ -1,4 +1,0 @@
-abismal_torch.io.manager
-========================
-
-.. py:module:: abismal_torch.io.manager

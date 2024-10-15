@@ -1,4 +1,0 @@
-abismal_torch.io.loader
-=======================
-
-.. py:module:: abismal_torch.io.loader

@@ -1,4 +1,0 @@
-abismal_torch.likelihood.latent
-===============================
-
-.. py:module:: abismal_torch.likelihood.latent
