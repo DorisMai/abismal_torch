@@ -57,7 +57,7 @@ class Op(torch.nn.Module):
         """An alternative constructor from a gemmi.Op object.
 
         Args:
-            op ("gemmi.Oooop"): The gemmi.Op object.
+            op ("gemmi.Op"): The gemmi.Op object.
 
         Returns:
             Op: The torch-wrapped operator.

@@ -4,3 +4,5 @@
 .DS_Store
 .coverage
 coverage.xml
+.pytest_cache
+site/
