@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "abismal-torch"
-version = "0.1.0"
+version = "0.1.1a0"
 description = "Example template for developing custom Python package."
 authors = ["DorisMai <maihuanghao@gmail.com>"]
 readme = "README.md"
