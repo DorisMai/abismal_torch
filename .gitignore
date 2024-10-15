@@ -5,4 +5,5 @@
 .coverage
 coverage.xml
 .pytest_cache
+dist/
 site/
