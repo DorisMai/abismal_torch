@@ -53,7 +53,7 @@ class Op(torch.nn.Module):
         return self.__gemmi_op__
 
     @classmethod
-    def from_gemmi(cls, op):
+    def from_gemmi(cls, op: gemmi.Op):
         """An alternative constructor from a gemmi.Op object.
 
         Args:
