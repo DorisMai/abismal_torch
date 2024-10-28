@@ -105,12 +105,12 @@ class TestReciprocalASU:
         nested_Hobs = list(nested_Hobs)
 
         # Test source array using reflection ID
-        source_arr = torch.arange(rasu_data.asu_size)
-        gathered = rasu_data.gather(source_arr, nested_Hobs)
+        source = torch.arange(rasu_data.asu_size)
+        gathered = rasu_data.gather(source, nested_Hobs)
 
         assert gathered.size(0) == len(unique_image_id)
         flattened_gathered = torch.cat([t for t in gathered], dim=0)
         assert torch.equal(
             flattened_gathered,
-            source_arr[rasu_data.reflection_id[Hcell[:, 0], Hcell[:, 1], Hcell[:, 2]]],
+            source[rasu_data.reflection_id[Hcell[:, 0], Hcell[:, 1], Hcell[:, 2]]],
         )
