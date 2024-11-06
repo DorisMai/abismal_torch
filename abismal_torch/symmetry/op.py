@@ -39,7 +39,7 @@ class Op(torch.nn.Module):
     def __str__(self) -> str:
         return f"Op({self.__gemmi_op__.triplet()})"
 
-    def forward(self, hkl) -> torch.Tensor:
+    def forward(self, hkl: torch.Tensor) -> torch.Tensor:
         if self._identity:
             return hkl
         dtype = hkl.dtype
