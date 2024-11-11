@@ -13,9 +13,9 @@ class Op(torch.nn.Module):
         device (str, optional): The device where the tensor is stored.
 
     Attributes:
-        _rot (torch.nn.Parameter): The rotation matrix of the operator.
-        _den (torch.nn.Parameter): The denominator of the operator.
-        _identity (bool): Whether the operator is the identity.
+        _rot (torch.Tensor): The rotation matrix of the operator. Registered as a buffer.
+        _den (torch.Tensor): The denominator of the operator. Registered as a buffer.
+        _identity (bool): Whether the operator is the identity. Registered as a buffer.
     """
 
     def __init__(self, op: str, device: Optional[str] = None) -> None:
@@ -26,15 +26,18 @@ class Op(torch.nn.Module):
             raise ValueError(f"Expected str of triplet, got {type(op)}")
         self.__gemmi_op__ = gemmi.Op(op)
 
-        self._rot = torch.nn.Parameter(
+        self.register_buffer(
+            "_rot",
             torch.tensor(self.__gemmi_op__.rot, dtype=_dtype, device=device),
-            requires_grad=False,
         )
-        self._den = torch.nn.Parameter(
+        self.register_buffer(
+            "_den",
             torch.tensor(self.__gemmi_op__.DEN, dtype=_dtype, device=device),
-            requires_grad=False,
         )
-        self._identity = self.__gemmi_op__ == "x,y,z"
+        self.register_buffer(
+            "_identity",
+            torch.tensor(self.__gemmi_op__ == "x,y,z", dtype=torch.bool, device=device),
+        )
 
     def __str__(self) -> str:
         return f"Op({self.__gemmi_op__.triplet()})"

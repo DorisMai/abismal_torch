@@ -128,7 +128,7 @@ class TestReciprocalASUCollectionandGraph:
             rasu = rac.reciprocal_asus[rasu_id]
             H_rasu = rasu.H_rasu
             reflection_id_rasu = rasu.gather(
-                torch.arange(rasu.rasu_size, dtype=torch.int32), torch.tensor(H_rasu)
+                torch.arange(rasu.rasu_size, dtype=torch.int32), H_rasu
             )
             # Randomly get n_refln number of valid reflections from current rasu
             chosen_ids = torch.randint(len(H_rasu), (n_refln,))
