@@ -20,10 +20,10 @@ def test_imageaverage(n_image, n_refln, n_feature):
 
 
 @pytest.mark.parametrize(
-    "dropout, hidden_units, activation, kernel_init_scale, normalize",
-    [(None, None, "ReLU", 1.0, False), (0.2, 12, "SELU", 0.1, True)],
+    "dropout, hidden_units, activation, normalize",
+    [(None, None, "ReLU", False), (0.2, 12, "SELU", True)],
 )
-def test_feedforward(dropout, hidden_units, activation, kernel_init_scale, normalize):
+def test_feedforward(dropout, hidden_units, activation, normalize):
     n_image = 10
     n_refln = 100
     n_feature = 5
@@ -33,7 +33,6 @@ def test_feedforward(dropout, hidden_units, activation, kernel_init_scale, norma
         hidden_units=hidden_units,
         dropout=dropout,
         activation=activation,
-        kernel_init_scale=kernel_init_scale,
         normalize=normalize,
     )
     out = ff(data)
