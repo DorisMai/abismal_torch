@@ -7,6 +7,10 @@ import torch.nn as nn
 
 class VarianceScalingLazyLinear(nn.LazyLinear):
     def reset_parameters(self) -> None:
+        """
+        Initialize the weights of the linear layer using a truncated normal distribution
+        (cutoff at +/- 2 std) with mean 0 and scale 1/10 of the fan-avg mode.
+        """
         if self.in_features == 0:
             return
         fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(self.weight)
@@ -35,7 +39,8 @@ class FeedForward(nn.Module):
         ```
         out = dropout(linear(activation(hidden_linear(activation(layer_norm(in)))))) + in
         ```
-        Where dropout and layer normalization are optional.
+        Where dropout and layer normalization are optional, and the linear layers are
+        initialized with variance scaling.
 
         Args:
             input_size (int): Size of input features, i.e. last dimension of input tensor.
@@ -44,10 +49,6 @@ class FeedForward(nn.Module):
             hidden_units (int, optional): Size of the hidden layer. Defaults to 2 times
                 the input size.
             activation (str): Name of PyTorch activation function to use. Defaults to 'ReLU'.
-            xavier_gain (float, optional): Gain for Xavier initialization. Defaults to None,
-                in which case the gain is calculated from ReLu using `nn.init.calculate_gain`
-                (note that the name required by this function can be annoyingly inconsistent
-                with the arg `activation` needed to look up the activation function).
             normalize (bool): Whether to apply layer normalization. Defaults to False.
         """
         super().__init__(**kwargs)
@@ -73,3 +74,13 @@ class FeedForward(nn.Module):
         x_in = x
         x = self.network(x)
         return x + x_in
+
+
+class MLP(nn.Sequential):
+    def __init__(self, width, depth, hidden_width=None, input_layer=True):
+        layers = []
+        if input_layer:
+            layers.append(VarianceScalingLazyLinear(width))
+        for i in range(depth):
+            layers.append(FeedForward(width, hidden_units=hidden_width))
+        super().__init__(*layers)

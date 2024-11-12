@@ -1,2 +1,2 @@
 from .average import ImageAverage
-from .feedfoward import FeedForward
+from .feedfoward import MLP, FeedForward
