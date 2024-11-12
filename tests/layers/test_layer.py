@@ -2,7 +2,21 @@ import numpy as np
 import pytest
 import torch
 
-from abismal_torch.layers import FeedForward
+from abismal_torch.layers import *
+
+
+@pytest.mark.parametrize("n_image, n_refln, n_feature", [(10, 66, 5)])
+def test_imageaverage(n_image, n_refln, n_feature):
+    data = torch.rand(n_refln, n_feature, dtype=torch.float32)
+    image_id = torch.randint(0, n_image, (n_refln,))
+    average = ImageAverage()
+    out = average(data, image_id)
+    assert out.shape == (n_image, n_feature)
+
+    alternative_out = torch.full((n_image, n_feature), np.nan)
+    for i in range(n_image):
+        alternative_out[i] = data[image_id == i].mean(dim=0)
+    assert torch.allclose(out, alternative_out)
 
 
 @pytest.mark.parametrize(
