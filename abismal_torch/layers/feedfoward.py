@@ -1,6 +1,5 @@
 from typing import Optional
 
-import lightning as L
 import torch
 import torch.nn as nn
 
@@ -61,7 +60,7 @@ class VarianceScalingLinear(nn.Linear):
             nn.init.zeros_(self.bias)
 
 
-class FeedForward(L.LightningModule):
+class FeedForward(nn.Module):
     def __init__(
         self,
         input_size: int,

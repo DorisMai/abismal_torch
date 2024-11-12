@@ -22,7 +22,6 @@ class ReciprocalASU(torch.nn.Module):
         spacegroup: gemmi.SpaceGroup,
         dmin: float,
         anomalous: Optional[bool] = True,
-        device: Optional[str] = None,
         **kwargs
     ) -> None:
         """
@@ -33,7 +32,6 @@ class ReciprocalASU(torch.nn.Module):
             spacegroup (gemmi.SpaceGroup): Space group.
             dmin (float): Highest resolution in Ångstroms.
             anomalous (bool, optional): If true, treat Friedel mates as non-redudant.
-            device (str, optional): Device to place tensors on.
 
         Attributes:
             rasu_size (int): Number of unique reflections in the rasu. This variable is previously
@@ -58,9 +56,7 @@ class ReciprocalASU(torch.nn.Module):
 
         H_rasu = generate_reciprocal_asu(cell, spacegroup, dmin, anomalous)
         self.rasu_size = len(H_rasu)
-        self.register_buffer(
-            "H_rasu", torch.tensor(H_rasu, dtype=torch.int32, device=device)
-        )
+        self.register_buffer("H_rasu", torch.tensor(H_rasu, dtype=torch.int32))
 
         go = spacegroup.operations()
         self.Hmax = np.array(cell.get_hkl_limits(dmin))
@@ -77,20 +73,16 @@ class ReciprocalASU(torch.nn.Module):
                 reflection_id_grid[h, k, l] = np.arange(self.rasu_size)
         self.register_buffer(
             "reflection_id_grid",
-            torch.tensor(reflection_id_grid, dtype=torch.int32, device=device),
+            torch.tensor(reflection_id_grid, dtype=torch.int32),
         )
 
         self.register_buffer(
             "centric",
-            torch.tensor(
-                go.centric_flag_array(H_rasu), dtype=torch.bool, device=device
-            ),
+            torch.tensor(go.centric_flag_array(H_rasu), dtype=torch.bool),
         )
         self.register_buffer(
             "multiplicity",
-            torch.tensor(
-                go.epsilon_factor_array(H_rasu), dtype=torch.float32, device=device
-            ),
+            torch.tensor(go.epsilon_factor_array(H_rasu), dtype=torch.float32),
         )
 
     def gather(self, source: torch.Tensor, H: torch.Tensor) -> torch.Tensor:

@@ -1,11 +1,9 @@
 from typing import Optional
 
-import lightning as L
 import torch
-import torch.nn as nn
 
 
-class ImageAverage(L.LightningModule):
+class ImageAverage(torch.nn.Module):
     def forward(self, x: torch.Tensor, image_id: torch.Tensor) -> torch.Tensor:
         """
         Average x features by image_id.

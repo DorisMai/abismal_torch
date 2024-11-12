@@ -10,7 +10,6 @@ class Op(torch.nn.Module):
 
     Args:
         op (str): The triplet of the operator, e.g. "x,-y,z+1/3".
-        device (str, optional): The device where the tensor is stored.
 
     Attributes:
         _rot (torch.Tensor): The rotation matrix of the operator. Registered as a buffer.
@@ -18,7 +17,7 @@ class Op(torch.nn.Module):
         _identity (bool): Whether the operator is the identity. Registered as a buffer.
     """
 
-    def __init__(self, op: str, device: Optional[str] = None) -> None:
+    def __init__(self, op: str) -> None:
         super().__init__()
         _dtype = torch.float32
 
@@ -28,15 +27,15 @@ class Op(torch.nn.Module):
 
         self.register_buffer(
             "_rot",
-            torch.tensor(self.__gemmi_op__.rot, dtype=_dtype, device=device),
+            torch.tensor(self.__gemmi_op__.rot, dtype=_dtype),
         )
         self.register_buffer(
             "_den",
-            torch.tensor(self.__gemmi_op__.DEN, dtype=_dtype, device=device),
+            torch.tensor(self.__gemmi_op__.DEN, dtype=_dtype),
         )
         self.register_buffer(
             "_identity",
-            torch.tensor(self.__gemmi_op__ == "x,y,z", dtype=torch.bool, device=device),
+            torch.tensor(self.__gemmi_op__ == "x,y,z", dtype=torch.bool),
         )
 
     def __str__(self) -> str:
