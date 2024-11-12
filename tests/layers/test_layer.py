@@ -6,10 +6,10 @@ from abismal_torch.layers import FeedForward
 
 
 @pytest.mark.parametrize(
-    "dropout, hidden_units, activation, xavier_gain, normalize",
-    [(None, None, "ReLU", None, False), (0.2, 12, "SELU", 0.8, True)],
+    "dropout, hidden_units, activation, kernel_init_scale, normalize",
+    [(None, None, "ReLU", 1.0, False), (0.2, 12, "SELU", 0.1, True)],
 )
-def test_resnet(dropout, hidden_units, activation, xavier_gain, normalize):
+def test_feedforward(dropout, hidden_units, activation, kernel_init_scale, normalize):
     n_image = 10
     n_refln = 100
     n_feature = 5
@@ -19,7 +19,7 @@ def test_resnet(dropout, hidden_units, activation, xavier_gain, normalize):
         hidden_units=hidden_units,
         dropout=dropout,
         activation=activation,
-        xavier_gain=xavier_gain,
+        kernel_init_scale=kernel_init_scale,
         normalize=normalize,
     )
     out = ff(data)

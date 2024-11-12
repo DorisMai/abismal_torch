@@ -5,6 +5,62 @@ import torch
 import torch.nn as nn
 
 
+class VarianceScalingLinear(nn.Linear):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: Optional[bool] = True,
+        mode: Optional[str] = "fan_avg",
+        scale: Optional[float] = 1.0,
+        distribution: Optional[str] = "truncated_normal",
+        low: Optional[float] = -2,
+        high: Optional[float] = 2,
+    ) -> None:
+        """
+        Linear layer with variance scaling initialization using truncated normal distribution.
+
+        Args:
+            in_features (int): Size of input features
+            out_features (int): Size of output features
+            bias (bool): If True, adds a learnable bias to the output
+            mode (str): One of 'fan_in', 'fan_out', or 'fan_avg'
+            scale (float): Scaling factor for the weights
+            distribution (str): 'truncated_normal' or 'normal'
+            low (float): Lower bound for truncated normal distribution
+            high (float): Upper bound for truncated normal distribution
+        """
+        super().__init__(in_features, out_features, bias)
+        self.initialize_parameters(mode, scale, distribution, low, high)
+
+    def initialize_parameters(self, mode, scale, distribution, low, high):
+        fan_in = self.in_features
+        fan_out = self.out_features
+
+        if mode == "fan_in":
+            fan = fan_in
+        elif mode == "fan_out":
+            fan = fan_out
+        elif mode == "fan_avg":
+            fan = (fan_in + fan_out) / 2
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
+
+        std = torch.sqrt(torch.tensor(scale / fan))
+
+        if distribution == "truncated_normal":
+            nn.init.trunc_normal_(
+                self.weight, mean=0, std=std, a=low * std, b=high * std
+            )
+        elif distribution == "normal":
+            nn.init.normal_(self.weight, std=std)
+        else:
+            raise ValueError(f"Invalid distribution: {distribution}")
+
+        if self.bias is not None:
+            nn.init.zeros_(self.bias)
+
+
 class FeedForward(L.LightningModule):
     def __init__(
         self,
@@ -12,7 +68,9 @@ class FeedForward(L.LightningModule):
         dropout: Optional[float] = None,
         hidden_units: Optional[int] = None,
         activation: Optional[str] = "ReLU",
-        xavier_gain: Optional[float] = None,
+        kernel_init_scale: Optional[float] = 1.0,
+        kernel_init_mode: Optional[str] = "fan_avg",
+        kernel_init_distribution: Optional[str] = "truncated_normal",
         normalize: Optional[bool] = False,
         **kwargs,
     ) -> None:
@@ -39,38 +97,25 @@ class FeedForward(L.LightningModule):
         super().__init__(**kwargs)
         self.input_size = input_size
         self.hidden_units = hidden_units
-        self.xavier_gain = xavier_gain
-        if self.xavier_gain is None:
-            self.xavier_gain = nn.init.calculate_gain(activation.lower())
         self.activation = getattr(nn.modules.activation, activation)()
         if self.hidden_units is None:
             self.hidden_units = 2 * self.input_size
-        self.linear1 = nn.Linear(self.input_size, self.hidden_units)
-        self.linear2 = nn.Linear(self.hidden_units, self.input_size)
+        self.linear1 = VarianceScalingLinear(
+            self.input_size, self.hidden_units, scale=kernel_init_scale
+        )
+        self.linear2 = VarianceScalingLinear(
+            self.hidden_units, self.input_size, scale=kernel_init_scale
+        )
 
         self.network = nn.Sequential()
         if normalize:
             self.network.append(nn.LayerNorm(input_size))
         self.network.append(self.activation)
-        self.network.append(self._xavier_initialize(self.linear1))
+        self.network.append(self.linear1)
         self.network.append(self.activation)
-        self.network.append(self._xavier_initialize(self.linear2))
+        self.network.append(self.linear2)
         if dropout is not None:
             self.network.append(nn.Dropout(dropout))
-
-    def _xavier_initialize(self, linear: nn.Linear) -> nn.Linear:
-        """
-        Initialize the weights of a linear layer using Xavier initialization.
-
-        Args:
-            linear (nn.Linear): Linear layer to initialize.
-
-        Returns:
-            nn.Linear: The initialized linear layer.
-        """
-        nn.init.xavier_normal_(linear.weight, gain=self.xavier_gain)
-        nn.init.zeros_(linear.bias)
-        return linear
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_in = x
