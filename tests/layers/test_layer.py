@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from abismal_torch.layers import *
-from abismal_torch.layers.feedfoward import VarianceScalingLazyLinear
+from abismal_torch.layers.feedforward import VarianceScalingLazyLinear
 
 
 @pytest.fixture
@@ -28,8 +28,8 @@ def test_imageaverage(test_params):
     assert torch.allclose(out, alternative_out)
 
 
-def test_lazylinear(test_params):
-    out_size = 10
+@pytest.mark.parametrize("out_size", [10])
+def test_lazylinear(test_params, out_size):
     ll = VarianceScalingLazyLinear(out_size)
     x = torch.randn((test_params["n_refln"], test_params["n_feature"]))
     out = ll(x)

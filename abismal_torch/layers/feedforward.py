@@ -77,7 +77,24 @@ class FeedForward(nn.Module):
 
 
 class MLP(nn.Sequential):
-    def __init__(self, width, depth, hidden_width=None, input_layer=True):
+    def __init__(
+        self,
+        width: int,
+        depth: int,
+        hidden_width: Optional[int] = None,
+        input_layer: Optional[bool] = True,
+    ):
+        """
+        A Multi-Layer Perceptron (MLP) with depth sets of feedforward layers.
+
+        Args:
+            width (int): Width of the input and output layers.
+            depth (int): Number of feedforward modules.
+            hidden_width (int, optional): Width of the hidden layers. Defaults to None,
+                which FeedForward will set it to 2 times the width.
+            input_layer (bool, optional): Whether to include a Linear layer at the
+                beginning of the MLP. Defaults to True.
+        """
         layers = []
         if input_layer:
             layers.append(VarianceScalingLazyLinear(width))

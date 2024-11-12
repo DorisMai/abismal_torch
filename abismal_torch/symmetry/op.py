@@ -62,6 +62,6 @@ class Op(torch.nn.Module):
             op ("gemmi.Op"): The gemmi.Op object.
 
         Returns:
-            Op: The torch-wrapped operator.
+            Op (cls): The torch-wrapped operator.
         """
         return cls(op.triplet())

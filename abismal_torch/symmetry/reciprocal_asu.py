@@ -39,9 +39,9 @@ class ReciprocalASU(torch.nn.Module):
             Hmax (np.array(np.int32)): Maximum h, k, and l in the rasu under the given dmin.
             H_rasu (torch.Tensor): Unique Miller indices in the rasu. Registered as a buffer.
             centric (torch.Tensor): A boolean tensor indicating if each unique reflection
-              is centric. Registered as a buffer.
+                is centric. Registered as a buffer.
             multiplicity (torch.Tensor): A float tensor with the multiplicity of each unique
-              reflection. This variable is previously named as epsilon. Registered as a buffer.
+                reflection. This variable is previously named as epsilon. Registered as a buffer.
             reflection_id_grid (torch.Tensor): A 3D tensor that contains the 1D integer
                 ID of each unique reflection. ID value ranges from 0 to rasu_size, and is -1 if the
                 reflection is not in the rasu due to dmin cutoff, systematic absences, etc. This
