@@ -62,11 +62,8 @@ class VarianceScalingNormalInitializer(nn.Module):
         std = self.gain * math.sqrt(1.0 / self.fan)
         mean = 0.0
         if self.low is None or self.high is None:  # normal distribution
-            print("normal distribution of mean {} and std {}".format(mean, std))
             nn.init.normal_(tensor, mean, std, generator=self.generator)
-            print(tensor)
         else:  # truncated normal distribution
-            print("truncated normal distribution")
             nn.init.trunc_normal_(
                 tensor,
                 mean,
