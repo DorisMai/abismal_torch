@@ -1,27 +1,41 @@
-import math
 from typing import Optional
 
 import torch
 import torch.nn as nn
 
+from .initializers import VarianceScalingNormalInitializer
 
-class VarianceScalingLazyLinear(nn.LazyLinear):
+
+class CustomInitLazyLinear(nn.LazyLinear):
+    def __init__(
+        self,
+        output_size: int,
+        weight_initializer: Optional[nn.Module] = None,
+        bias_initializer: Optional[nn.Module] = None,
+        **kwargs,
+    ):
+        """
+        A lazy linear layer with custom weight and bias initialization. The
+        initializers can be the built-in methods from torch.nn.init, or a custom one.
+
+        Args:
+            output_size (int): Size of the output features.
+            weight_initializer (nn.Module, optional): Weight initializer.
+            bias_initializer (nn.Module, optional): Bias initializer.
+        """
+        super().__init__(output_size, **kwargs)
+        self.weight_initializer = weight_initializer
+        self.bias_initializer = bias_initializer
+
     def reset_parameters(self) -> None:
-        """
-        Initialize the weights of the linear layer using a truncated normal distribution
-        (cutoff at +/- 2 std) with mean 0 and scale 1/10 of the fan-avg mode.
-        """
         if self.in_features == 0:
             return
-        fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(self.weight)
-        fan_avg = 0.5 * (fan_in + fan_out)
-        scale = 1 / 10.0
-        std = math.sqrt(scale / fan_avg)
-        mean = 0.0
-        low, high = -2 * std, 2 * std
-        torch.nn.init.trunc_normal_(self.weight, mean, std, low, high)
-        if self.bias is not None:
-            torch.nn.init.zeros_(self.bias)
+        if self.weight_initializer is None:
+            super().reset_parameters()
+        else:
+            self.weight_initializer(self.weight)
+        if self.bias is not None and self.bias_initializer is not None:
+            self.bias_initializer(self.bias)
 
 
 class FeedForward(nn.Module):
@@ -32,6 +46,8 @@ class FeedForward(nn.Module):
         hidden_units: Optional[int] = None,
         activation: Optional[str] = "ReLU",
         normalize: Optional[bool] = False,
+        weight_initializer: Optional[nn.Module] = None,
+        bias_initializer: Optional[nn.Module] = None,
         **kwargs,
     ) -> None:
         """
@@ -50,6 +66,8 @@ class FeedForward(nn.Module):
                 the input size.
             activation (str): Name of PyTorch activation function to use. Defaults to 'ReLU'.
             normalize (bool): Whether to apply layer normalization. Defaults to False.
+            weight_initializer (nn.Module, optional): Weight initializer.
+            bias_initializer (nn.Module, optional): Bias initializer.
         """
         super().__init__(**kwargs)
         self.input_size = input_size
@@ -57,8 +75,12 @@ class FeedForward(nn.Module):
         self.activation = getattr(nn.modules.activation, activation)()
         if self.hidden_units is None:
             self.hidden_units = 2 * self.input_size
-        self.linear1 = VarianceScalingLazyLinear(self.hidden_units)
-        self.linear2 = VarianceScalingLazyLinear(self.input_size)
+        self.linear1 = CustomInitLazyLinear(
+            self.hidden_units, weight_initializer, bias_initializer
+        )
+        self.linear2 = CustomInitLazyLinear(
+            self.input_size, weight_initializer, bias_initializer
+        )
 
         self.network = nn.Sequential()
         if normalize:
@@ -83,6 +105,8 @@ class MLP(nn.Sequential):
         depth: int,
         hidden_width: Optional[int] = None,
         input_layer: Optional[bool] = True,
+        weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
+        bias_initializer: Optional[nn.Module] = nn.init.zeros_,
     ):
         """
         A Multi-Layer Perceptron (MLP) with depth sets of feedforward layers.
@@ -94,10 +118,21 @@ class MLP(nn.Sequential):
                 which FeedForward will set it to 2 times the width.
             input_layer (bool, optional): Whether to include a Linear layer at the
                 beginning of the MLP. Defaults to True.
+            weight_initializer (nn.Module, optional): Weight initializer for the FeedForward module.
+                Defaults to VarianceScalingNormalInitializer().
+            bias_initializer (nn.Module, optional): Bias initializer for the FeedForward module.
+                Defaults to nn.init.zeros_.
         """
         layers = []
         if input_layer:
-            layers.append(VarianceScalingLazyLinear(width))
+            layers.append(CustomInitLazyLinear(width))
         for i in range(depth):
-            layers.append(FeedForward(width, hidden_units=hidden_width))
+            layers.append(
+                FeedForward(
+                    width,
+                    hidden_units=hidden_width,
+                    weight_initializer=weight_initializer,
+                    bias_initializer=bias_initializer,
+                )
+            )
         super().__init__(*layers)

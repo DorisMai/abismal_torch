@@ -1,20 +1,30 @@
 import numpy as np
 import pytest
 import torch
+import torch.nn.init as init
 
 from abismal_torch.layers import *
-from abismal_torch.layers.feedforward import VarianceScalingLazyLinear
+from abismal_torch.layers.feedforward import CustomInitLazyLinear
+
+
+@pytest.fixture
+def linear_out_size():
+    return 10
 
 
 @pytest.fixture
 def test_params():
-    return {"n_refln": 67, "n_feature": 12, "n_image": 10}
+    return {"n_refln": 120, "n_feature": 17, "n_image": 10}
 
 
-def test_imageaverage(test_params):
-    data = torch.rand(
-        test_params["n_refln"], test_params["n_feature"], dtype=torch.float32
+@pytest.fixture
+def data(test_params):
+    return torch.rand(
+        (test_params["n_refln"], test_params["n_feature"]), dtype=torch.float32
     )
+
+
+def test_imageaverage(test_params, data):
     image_id = torch.randint(0, test_params["n_image"], (test_params["n_refln"],))
     average = ImageAverage()
     out = average(data, image_id)
@@ -28,31 +38,71 @@ def test_imageaverage(test_params):
     assert torch.allclose(out, alternative_out)
 
 
-@pytest.mark.parametrize("out_size", [10])
-def test_lazylinear(test_params, out_size):
-    ll = VarianceScalingLazyLinear(out_size)
-    x = torch.randn((test_params["n_refln"], test_params["n_feature"]))
-    out = ll(x)
-    assert out.shape == (test_params["n_refln"], out_size)
+def test_lazylinear_shape(test_params, linear_out_size, data):
+    linear = CustomInitLazyLinear(linear_out_size)
+    out = linear(data)
+    assert out.shape == (test_params["n_refln"], linear_out_size)
 
-    # check weights mean and std
-    epsilon = 0.1
-    assert ll.weight.mean().abs() < epsilon, f"Weight mean is {ll.weight.mean()}"
 
-    fan_avg = 0.5 * (test_params["n_feature"] + out_size)
-    scale = 1 / 10.0
-    std = np.sqrt(scale / fan_avg)
-    epsilon = std / 2
-    assert (
-        torch.abs(ll.weight.std() - std) < epsilon
-    ), f"Weight std is {ll.weight.std()}, Expected {std}"
+@pytest.mark.parametrize("seed", [42])
+def test_lazylinear_init(linear_out_size, seed, data):
+    # check using built-in initializers
+    w_init = init.ones_
+    b_init = init.zeros_
+    linear = CustomInitLazyLinear(
+        linear_out_size, weight_initializer=w_init, bias_initializer=b_init
+    )
+    _ = linear(data)
+    assert torch.allclose(linear.weight, torch.ones_like(linear.weight))
+    assert torch.allclose(linear.bias, torch.zeros_like(linear.bias))
+
+    # check using custom initializer with default arguments
+    w_init = VarianceScalingNormalInitializer(generator=torch.manual_seed(seed))
+    b_init = init.zeros_
+    linear = CustomInitLazyLinear(
+        linear_out_size, weight_initializer=w_init, bias_initializer=b_init
+    )
+    _ = linear(data)
+    alternative_weights = torch.randn_like(linear.weight)
+    std = w_init.gain * np.sqrt(1.0 / w_init.fan)
+    torch.nn.init.trunc_normal_(
+        alternative_weights,
+        0,
+        std,
+        -2 * std,
+        2 * std,
+        generator=torch.manual_seed(seed),
+    )
+    assert torch.allclose(linear.weight, alternative_weights)
+
+    # check using custom initializer 2 with custom arguments
+    my_activation = "leaky_relu"
+    my_param = 0.2
+    w_init = VarianceScalingNormalInitializer(
+        mode="fan_in",
+        gain=None,
+        low=None,
+        high=None,
+        nonlinearity=my_activation,
+        param=my_param,
+        generator=torch.manual_seed(seed),
+    )
+    linear = CustomInitLazyLinear(linear_out_size, weight_initializer=w_init)
+    _ = linear(data)
+    alternative_weights = torch.randn_like(linear.weight)
+    gain = torch.nn.init.calculate_gain(my_activation, my_param)
+    std = gain * np.sqrt(1.0 / alternative_weights.T.shape[0])
+    torch.nn.init.normal_(
+        alternative_weights, 0, std, generator=torch.manual_seed(seed)
+    )
+    assert torch.allclose(linear.weight, alternative_weights)
 
 
 @pytest.mark.parametrize(
     "dropout, hidden_units, activation, normalize",
     [(None, None, "ReLU", False), (0.2, 12, "SELU", True)],
 )
-def test_feedforward(test_params, dropout, hidden_units, activation, normalize):
+def test_feedforward_shape(test_params, dropout, hidden_units, activation, normalize):
     data = torch.rand(
         test_params["n_image"],
         test_params["n_refln"],
@@ -75,14 +125,14 @@ def test_feedforward(test_params, dropout, hidden_units, activation, normalize):
 
 
 @pytest.mark.parametrize("width, depth, hidden_width", [(4, 3, None), (16, 6, 7)])
-def test_mlp(test_params, width, depth, hidden_width):
+def test_mlp_shape(test_params, width, depth, hidden_width):
     mlp = MLP(width, depth, hidden_width=hidden_width)
-    x = torch.randn((test_params["n_refln"], test_params["n_feature"]))
-    out = mlp(x)
+    data = torch.randn((test_params["n_refln"], test_params["n_feature"]))
+    out = mlp(data)
     assert out.shape == (test_params["n_refln"], width)
     # check depth of MLP
     assert len(list(mlp.children())) == depth + 1
-    # check a hidden_width
+    # check hidden_width
     if hidden_width is None:
         hidden_width = 2 * width
-    assert mlp.state_dict()["1.network.1.weight"].T.shape == (width, hidden_width)
+    assert mlp[1].linear1.weight.T.shape == (width, hidden_width)
