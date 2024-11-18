@@ -5,6 +5,7 @@ import torch.nn.init as init
 
 from abismal_torch.layers import *
 from abismal_torch.layers.feedforward import CustomInitLazyLinear
+from abismal_torch.scaling import ImageScaler
 
 
 @pytest.fixture
@@ -24,8 +25,12 @@ def data(test_params):
     )
 
 
-def test_imageaverage(test_params, data):
-    image_id = torch.randint(0, test_params["n_image"], (test_params["n_refln"],))
+@pytest.fixture
+def image_id(test_params):
+    return torch.randint(0, test_params["n_image"], (test_params["n_refln"],))
+
+
+def test_imageaverage(test_params, data, image_id):
     average = ImageAverage()
     out = average(data, image_id)
     assert out.shape == (test_params["n_image"], test_params["n_feature"])
@@ -124,15 +129,46 @@ def test_feedforward_shape(test_params, dropout, hidden_units, activation, norma
     )
 
 
-@pytest.mark.parametrize("width, depth, hidden_width", [(4, 3, None), (16, 6, 7)])
-def test_mlp_shape(test_params, width, depth, hidden_width):
-    mlp = MLP(width, depth, hidden_width=hidden_width)
+@pytest.mark.parametrize("width, depth, hidden_units", [(4, 3, None), (16, 6, 7)])
+def test_mlp_shape(test_params, width, depth, hidden_units):
+    mlp = MLP(width, depth, input_layer=True, hidden_units=hidden_units)
     data = torch.randn((test_params["n_refln"], test_params["n_feature"]))
     out = mlp(data)
     assert out.shape == (test_params["n_refln"], width)
     # check depth of MLP
     assert len(list(mlp.children())) == depth + 1
-    # check hidden_width
-    if hidden_width is None:
-        hidden_width = 2 * width
-    assert mlp[1].linear1.weight.T.shape == (width, hidden_width)
+    # check hidden_units
+    if hidden_units is None:
+        hidden_units = 2 * width
+    assert mlp[1].linear1.weight.T.shape == (width, hidden_units)
+
+
+@pytest.mark.parametrize("share_weights", [True])
+def test_image_scaler(test_params, data, image_id, share_weights):
+    metadata = data
+    iobs = torch.randn(test_params["n_refln"], 1)
+    sigiobs = torch.randn(test_params["n_refln"], 1)
+    inputs = (metadata, iobs, sigiobs)
+    mc_samples = 8
+    basic_scaling_model = ImageScaler(share_weights=share_weights)
+    output = basic_scaling_model(inputs, image_id, mc_samples)
+    assert output.shape == (test_params["n_refln"], mc_samples)
+    if share_weights:
+        mlp_w = basic_scaling_model.mlp[-1].linear2.weight
+        scale_mlp_w = basic_scaling_model.scale_mlp[-1].linear2.weight
+        assert torch.allclose(mlp_w, scale_mlp_w)
+
+    custom_params = {
+        "mlp_width": 20,
+        "mlp_depth": 4,
+        "hidden_units": 15,
+        "activation": "ReLU",
+    }
+    fancy_scaling_model = ImageScaler(share_weights=share_weights, **custom_params)
+    output = fancy_scaling_model(inputs, image_id, mc_samples)
+    # check width and depth
+    assert len(list(fancy_scaling_model.children())) == custom_params["mlp_depth"] + 1
+    assert fancy_scaling_model.mlp[1].linear1.weight.T.shape == (
+        custom_params["mlp_width"],
+        custom_params["hidden_units"],
+    )

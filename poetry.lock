@@ -2423,6 +2423,21 @@ dev = ["autodocsumm", "celluloid", "jupyter", "matplotlib", "nbsphinx", "pytest"
 examples = ["celluloid", "jupyter", "matplotlib", "scikit-image", "seaborn", "tqdm"]
 
 [[package]]
+name = "rs-distributions"
+version = "0.0.2"
+description = "Statistical distributions for structural biology"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "rs_distributions-0.0.2-py3-none-any.whl", hash = "sha256:86f874606c39660470f90a05e2c9e011fc4380ccbac859224712bad69875c13a"},
+    {file = "rs_distributions-0.0.2.tar.gz", hash = "sha256:6b21af7114c99c6349a69f70fcefbbad9197532dda9db51f22eca9070e50b1dd"},
+]
+
+[package.dependencies]
+numpy = "*"
+torch = "*"
+
+[[package]]
 name = "scipy"
 version = "1.14.1"
 description = "Fundamental algorithms for scientific computing in Python"
@@ -2917,4 +2932,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "472d4fcb38105f3f2c277d0984a2886bfd68085a35039f28a62bc97ccaaea28a"
+content-hash = "467a891e748c9da63aaa5badad2ff31c39296e2055ab58dae11c4b7287bdd182"

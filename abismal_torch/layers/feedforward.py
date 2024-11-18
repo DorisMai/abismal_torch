@@ -2,6 +2,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .initializers import VarianceScalingNormalInitializer
 
@@ -13,7 +14,7 @@ class CustomInitLazyLinear(nn.LazyLinear):
         weight_initializer: Optional[nn.Module] = None,
         bias_initializer: Optional[nn.Module] = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         A lazy linear layer with custom weight and bias initialization. The
         initializers can be the built-in methods from torch.nn.init, or a custom one.
@@ -44,10 +45,10 @@ class FeedForward(nn.Module):
         input_size: int,
         dropout: Optional[float] = None,
         hidden_units: Optional[int] = None,
-        activation: Optional[str] = "ReLU",
+        activation: Optional[str | nn.Module] = "ReLU",
         normalize: Optional[bool] = False,
-        weight_initializer: Optional[nn.Module] = None,
-        bias_initializer: Optional[nn.Module] = None,
+        weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
+        bias_initializer: Optional[nn.Module] = nn.init.zeros_,
         **kwargs,
     ) -> None:
         """
@@ -64,17 +65,24 @@ class FeedForward(nn.Module):
                 Defaults to None.
             hidden_units (int, optional): Size of the hidden layer. Defaults to 2 times
                 the input size.
-            activation (str): Name of PyTorch activation function to use. Defaults to 'ReLU'.
+            activation (str | nn.Module, optional): Activation function to use. If a string,
+                it should be the name of a PyTorch activation function. Otherwise, it should
+                be an instance of a nn.Module. Defaults to 'ReLU'.
             normalize (bool): Whether to apply layer normalization. Defaults to False.
-            weight_initializer (nn.Module, optional): Weight initializer.
-            bias_initializer (nn.Module, optional): Bias initializer.
+            weight_initializer (nn.Module, optional): Weight initializer. Defaults to
+                VarianceScalingNormalInitializer with default parameters.
+            bias_initializer (nn.Module, optional): Bias initializer. Defaults to
+                nn.init.zeros_.
         """
         super().__init__(**kwargs)
         self.input_size = input_size
         self.hidden_units = hidden_units
-        self.activation = getattr(nn.modules.activation, activation)()
         if self.hidden_units is None:
             self.hidden_units = 2 * self.input_size
+        if isinstance(activation, str):
+            self.activation = getattr(nn.modules.activation, activation)()
+        else:
+            self.activation = activation
         self.linear1 = CustomInitLazyLinear(
             self.hidden_units, weight_initializer, bias_initializer
         )
@@ -100,39 +108,19 @@ class FeedForward(nn.Module):
 
 class MLP(nn.Sequential):
     def __init__(
-        self,
-        width: int,
-        depth: int,
-        hidden_width: Optional[int] = None,
-        input_layer: Optional[bool] = True,
-        weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
-        bias_initializer: Optional[nn.Module] = nn.init.zeros_,
-    ):
+        self, width: int, depth: int, input_layer: Optional[bool] = False, **kwargs
+    ) -> None:
         """
         A Multi-Layer Perceptron (MLP) with depth sets of feedforward layers.
 
         Args:
             width (int): Width of the input and output layers.
             depth (int): Number of feedforward modules.
-            hidden_width (int, optional): Width of the hidden layers. Defaults to None,
-                which FeedForward will set it to 2 times the width.
-            input_layer (bool, optional): Whether to include a Linear layer at the
-                beginning of the MLP. Defaults to True.
-            weight_initializer (nn.Module, optional): Weight initializer for the FeedForward module.
-                Defaults to VarianceScalingNormalInitializer().
-            bias_initializer (nn.Module, optional): Bias initializer for the FeedForward module.
-                Defaults to nn.init.zeros_.
+            **kwargs: Keyword arguments for FeedForward.
         """
         layers = []
         if input_layer:
             layers.append(CustomInitLazyLinear(width))
-        for i in range(depth):
-            layers.append(
-                FeedForward(
-                    width,
-                    hidden_units=hidden_width,
-                    weight_initializer=weight_initializer,
-                    bias_initializer=bias_initializer,
-                )
-            )
+        for _ in range(depth):
+            layers.append(FeedForward(width, **kwargs))
         super().__init__(*layers)
