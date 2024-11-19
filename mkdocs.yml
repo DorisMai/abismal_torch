@@ -8,6 +8,7 @@ theme: readthedocs
 plugins:
   - search
   - autorefs
+  - mermaid2
   - mkdocstrings:
       default_handler: python
       handlers:
@@ -16,3 +17,5 @@ plugins:
           options:
             docstring_style: google
             annotations_path: full
+            docstring_section_style: spacy
+            enable_markdown: true

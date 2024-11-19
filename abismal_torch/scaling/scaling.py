@@ -15,20 +15,41 @@ class ImageScaler(nn.Module):
         mlp_depth: Optional[int] = 20,
         share_weights: Optional[bool] = True,
         hidden_units: Optional[int] = None,
-        activation: Optional[str] = "LeakyReLU",
+        use_glu: Optional[bool] = False,
         scaling_posterior: Optional[
             torch.distributions.Distribution
         ] = rsd.FoldedNormal,
         **kwargs
     ) -> None:
         """
+        An image scaler that uses MLP (currently only supports default FeedForward or FeedForwardGLU)
+        on metadata and image embeddings to predict the parameters of the scaling posterior distribution.
+        The architecture is:
+
+        ```mermaid
+        graph LR
+            I(["(iobs, sigiobs)"]) --> K[concat]
+            M([metadata]) --> K
+            K --> B[image_linear_in]
+            B --> C[mlp]
+            C --> D[pool]
+            D --> E["+"]
+            M --> G[scale_linear_in]
+            G --> E
+            E --> H[scale_mlp]
+            H --> I2[linear_out]
+            I2 --> J(["(loc, scale)"])
+        ```
+
         Args:
             mlp_width (int, optional): int, see MLP argument.
             mlp_depth (int, optional): int, see MLP argument.
             share_weights (bool, optional): bool, whether to share weights between the
                 image and the scale MLPs.
             hidden_units (int, optional): int, see FeedForward argument.
-            activation (str, optional): str, see FeedForward argument.
+            use_glu (bool, optional): bool, see MLP argument.
+            scaling_posterior (torch.distributions.Distribution, optional): the scaling
+                posterior distribution.
         """
         super().__init__(**kwargs)
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
@@ -41,7 +62,7 @@ class ImageScaler(nn.Module):
             mlp_depth,
             input_layer=False,
             hidden_units=hidden_units,
-            activation=activation,
+            use_glu=use_glu,
         )
         if share_weights:
             self.scale_mlp = self.mlp
@@ -51,7 +72,7 @@ class ImageScaler(nn.Module):
                 mlp_depth,
                 input_layer=False,
                 hidden_units=hidden_units,
-                activation=activation,
+                use_glu=use_glu,
             )
         self.scaling_posterior = scaling_posterior
 
@@ -65,8 +86,12 @@ class ImageScaler(nn.Module):
         Args:
             inputs (Sequence[torch.Tensor]): a tuple of (asu_id, ..., metadata, iobs, sigiobs)
                 tensors of shape (n_reflns, n_features).
-            image_id (torch.Tensor): (n_reflns)
-            mc_samples (int): int
+            image_id (torch.Tensor): shape (n_reflns), the image id for each reflection.
+            mc_samples (int): int, number of samples to draw from the scaling posterior.
+
+        Returns:
+            z (torch.Tensor): shape (mc_samples, n_reflns), samples from the learned scaling
+                posterior.
         """
         metadata, iobs, sigiobs = inputs[-3], inputs[-2], inputs[-1]
         image = torch.concat(
