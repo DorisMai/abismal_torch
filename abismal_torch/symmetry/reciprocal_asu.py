@@ -110,13 +110,14 @@ class ReciprocalASUCollection(torch.nn.Module):
         Attributes:
             reciprocal_asus (tuple[ReciprocalASU]): A tuple of rasu objects.
             Hmax (np.array(np.int32)): Maximum h, k, and l of all asus.
-            H_rasu (torch.Tensor): A tensor of shape (n_total_reflections, 3) that contains the
+            rac_size (int): Total number of unique reflections in all asus.
+            H_rasu (torch.Tensor): A tensor of shape (rac_size, 3) that contains the
                 Miller indices of all unique reflections in all asus. Registered as a buffer.
-            rasu_ids (torch.Tensor): A tensor of shape (n_total_reflections,) that contains the
+            rasu_ids (torch.Tensor): A tensor of shape (rac_size,) that contains the
                 rasu ID of each reflection. Registered as a buffer.
-            centric (torch.Tensor): A tensor of shape (n_total_reflections,) that contains the
+            centric (torch.Tensor): A tensor of shape (rac_size,) that contains the
                 centric flag of each reflection. Registered as a buffer.
-            multiplicity (torch.Tensor): A tensor of shape (n_total_reflections,) that contains
+            multiplicity (torch.Tensor): A tensor of shape (rac_size,) that contains
                 the multiplicity of each reflection. Registered as a buffer.
             reflection_id_grid (torch.Tensor): A tensor of shape (n_asus, 2*h+1, 2*k+1, 2*l+1)
                 that contains the reflection ID of each reflection. Registered as a buffer.
@@ -125,13 +126,13 @@ class ReciprocalASUCollection(torch.nn.Module):
         self.reciprocal_asus = tuple(rasus)
         rasu_ids, centric, multiplicity = [], [], []
         H_rasu = []
-        self.rasu_size = 0
+        self.rac_size = 0
         self.Hmax = np.zeros(3, dtype=np.int32)
 
         for rasu_id, rasu in enumerate(self.reciprocal_asus):
             centric.append(rasu.centric)
             multiplicity.append(rasu.multiplicity)
-            self.rasu_size += rasu.rasu_size
+            self.rac_size += rasu.rasu_size
             self.Hmax = np.maximum(self.Hmax, rasu.Hmax)
             rasu_ids.append(torch.full((rasu.rasu_size,), rasu_id, dtype=torch.int32))
             H_rasu.append(rasu.H_rasu)
@@ -161,7 +162,7 @@ class ReciprocalASUCollection(torch.nn.Module):
     ) -> torch.Tensor:
         """
         Parameters:
-            source (torch.Tensor): A tensor of shape (n_total_reflections, ...).
+            source (torch.Tensor): A tensor of shape (rac_size, ...).
             rasu_id (torch.Tensor): A tensor of shape (n_refln,) that contains the
                 rasu ID of each reflection.
             H (torch.Tensor): A tensor of shape (n_refln, 3).
@@ -203,11 +204,11 @@ class ReciprocalASUGraph(ReciprocalASUCollection):
                 reindexing operations for each rasu.
 
         Attributes:
-            is_root (torch.Tensor): A boolean tensor of shape (n_total_reflections,) that is True for
+            is_root (torch.Tensor): A boolean tensor of shape (rac_size,) that is True for
                 reflections whose rasu has no parent, i.e. parent rasu is itself. Registered as a buffer.
-            parents_reflection_ids (torch.Tensor): A tensor of shape (n_total_reflections,) that contains
+            parents_reflection_ids (torch.Tensor): A tensor of shape (rac_size,) that contains
                 the reflection ID of each reflection after reindexing in the parent rasu. Registered as a buffer.
-            H_parent (torch.Tensor): A tensor of shape (n_total_reflections, 3) that contains the
+            H_parent (torch.Tensor): A tensor of shape (rac_size, 3) that contains the
                 Miller indices of reflections in all rasus after reindexing.
         """
         super().__init__(*rasus, **kwargs)
