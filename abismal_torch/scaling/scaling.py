@@ -1,9 +1,9 @@
 from typing import Optional, Sequence
 
 import torch
+import torch.distributions as td
 import torch.nn as nn
 from rs_distributions import distributions as rsd
-from torch.distributions import Exponential
 
 from abismal_torch.layers import *
 
@@ -16,9 +16,7 @@ class ImageScaler(nn.Module):
         share_weights: Optional[bool] = True,
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
-        scaling_posterior: Optional[
-            torch.distributions.Distribution
-        ] = rsd.FoldedNormal,
+        scaling_posterior: Optional[torch.distributions.Distribution] = td.Gamma,
         **kwargs
     ) -> None:
         """
@@ -54,7 +52,8 @@ class ImageScaler(nn.Module):
         super().__init__(**kwargs)
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
         self.scale_linear_in = CustomInitLazyLinear(mlp_width)
-        self.linear_out = CustomInitLazyLinear(2)
+        num_distribution_args = len(scaling_posterior.arg_constraints)
+        self.linear_out = CustomInitLazyLinear(num_distribution_args)
         self.pool = ImageAverage()
         self.share_weights = share_weights
         self.mlp = MLP(
@@ -114,11 +113,13 @@ class ImageScaler(nn.Module):
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
 
-        location, scale = scaling_params[:, 0], scaling_params[:, 1]
-        scale_transform = torch.distributions.transform_to(
-            rsd.FoldedNormal.arg_constraints["scale"]
-        )
-        q = self.scaling_posterior(loc=location, scale=scale_transform(scale))
+        # transform scaling_params to satisfy distribution constraints
+        for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
+            scaling_params[:, i] = torch.distributions.transform_to(constraint)(
+                scaling_params[:, i]
+            )
+        q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
+
         z = q.sample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
         z = torch.t(z)  # Shape (n_reflns, mc_samples)
         return z
