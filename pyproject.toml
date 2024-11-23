@@ -12,7 +12,7 @@ numpy = "^2.0.0"
 lightning = "^2.4.0"
 gemmi = ">=0.5.5,<=0.6.6"
 reciprocalspaceship = "^1.0.0"
-rs-distributions = "^0.0.2"
+rs-distributions = "^0.0.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.8.0"
