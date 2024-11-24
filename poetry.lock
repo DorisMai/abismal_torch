@@ -2637,17 +2637,17 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rs-distributions"
-version = "0.0.2"
+version = "0.0.3"
 description = "Statistical distributions for structural biology"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "rs_distributions-0.0.2-py3-none-any.whl", hash = "sha256:86f874606c39660470f90a05e2c9e011fc4380ccbac859224712bad69875c13a"},
-    {file = "rs_distributions-0.0.2.tar.gz", hash = "sha256:6b21af7114c99c6349a69f70fcefbbad9197532dda9db51f22eca9070e50b1dd"},
+    {file = "rs_distributions-0.0.3-py3-none-any.whl", hash = "sha256:d9a0159688278ab3751685e9ccff3e10980c40948c236af3ac57635b611fdf2f"},
+    {file = "rs_distributions-0.0.3.tar.gz", hash = "sha256:2a5a649b2e8ffd1732fcfb90745c616676423c5a9592bbf8b92c9249dfe07ac4"},
 ]
 
 [package.dependencies]
-numpy = "*"
+numpy = {version = ">=2.1.1", markers = "python_version >= \"3.10\""}
 torch = "*"
 
 [[package]]
@@ -3173,4 +3173,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "11b14731055381396c319bfc2eab0f238470d9b7526fcb5715266b133377984d"
+content-hash = "f44ca92897803b763a81496bba3fe7aea91c83c4a05e32ff2e95f42c31c932a7"
