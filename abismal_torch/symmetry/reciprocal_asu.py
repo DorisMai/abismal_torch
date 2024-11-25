@@ -206,7 +206,7 @@ class ReciprocalASUGraph(ReciprocalASUCollection):
         Attributes:
             is_root (torch.Tensor): A boolean tensor of shape (rac_size,) that is True for
                 reflections whose rasu has no parent, i.e. parent rasu is itself. Registered as a buffer.
-            parents_reflection_ids (torch.Tensor): A tensor of shape (rac_size,) that contains
+            parent_reflection_ids (torch.Tensor): A tensor of shape (rac_size,) that contains
                 the reflection ID of each reflection after reindexing in the parent rasu. Registered as a buffer.
             H_parent (torch.Tensor): A tensor of shape (rac_size, 3) that contains the
                 Miller indices of reflections in all rasus after reindexing.
