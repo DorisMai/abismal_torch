@@ -62,7 +62,6 @@ class GenericWilsonDistribution(DistributionBase):
             self.correlation = correlation
 
         self._loc = self.correlation
-        print(self.correlation)
         self._scale = torch.sqrt(
             self.multiplicity
             * (1.0 - torch.square(self.correlation))

@@ -43,7 +43,6 @@ class TestWilson:
 
     @pytest.fixture
     def z(self, rag, mc_samples=10):
-        print("rag.rac_size", rag.rac_size)
         return torch.distributions.Exponential(rate=1).sample(
             (mc_samples, rag.rac_size)
         )
