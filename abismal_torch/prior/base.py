@@ -13,5 +13,5 @@ class PriorBase(torch.nn.Module):
         self, asu_id: Optional[torch.Tensor] = None, hkl: Optional[torch.Tensor] = None
     ) -> DistributionBase:
         raise NotImplementedError(
-            "Derived classes must implement distribution(asu_id, hkl) -> Distribution"
+            "Derived classes must implement distribution(asu_id, hkl) -> DistributionBase"
         )

@@ -227,7 +227,9 @@ class MultiWilsonPrior(torch.nn.Module):
         self.correlation = torch.tensor(correlation)
         self.normalization_sigma = normalization_sigma
 
-    def distribution(self, rasu_id=None, hkl=None):
+    def distribution(
+        self, rasu_id: Optional[torch.Tensor] = None, hkl: Optional[torch.Tensor] = None
+    ) -> MultiWilsonDistribution:
         """
         Args:
             rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. If None,
@@ -236,7 +238,7 @@ class MultiWilsonPrior(torch.nn.Module):
                 used when rasu_id is not None and must have same length with rasu_id.
 
         Returns:
-            MultiWilsonDistribution: GenericWilsonDistribution instance for the specified number of
+            p (MultiWilsonDistribution): MultiWilsonDistribution instance for the specified number of
             reflections, which is rac_size if rasu_id is None and len(rasu_id) otherwise.
         """
         if rasu_id is None:
