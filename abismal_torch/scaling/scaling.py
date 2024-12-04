@@ -86,7 +86,8 @@ class ImageScaler(nn.Module):
             inputs (Sequence[torch.Tensor]): a tuple of (asu_id, ..., metadata, iobs, sigiobs)
                 tensors of shape (n_reflns, n_features).
             image_id (torch.Tensor): shape (n_reflns), the image id for each reflection.
-            mc_samples (int): int, number of samples to draw from the scaling posterior.
+            mc_samples (int, optional): int, number of samples to draw from the scaling posterior.
+                Defaults to 32.
 
         Returns:
             z (torch.Tensor): shape (mc_samples, n_reflns), samples from the learned scaling
@@ -99,7 +100,6 @@ class ImageScaler(nn.Module):
 
         image_embeddings = self.image_linear_in(image)  # Shape (n_reflns, mlp_width)
         image_embeddings = self.mlp(image_embeddings)  # Shape (n_reflns, mlp_width)
-        print(image_embeddings.shape)
         image_embeddings = self.pool(
             image_embeddings, image_id
         )  # Shape (n_images, mlp_width)
@@ -120,6 +120,6 @@ class ImageScaler(nn.Module):
             )
         q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
 
-        z = q.sample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
+        z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
         z = torch.t(z)  # Shape (n_reflns, mc_samples)
         return z

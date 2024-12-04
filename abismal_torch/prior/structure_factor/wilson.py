@@ -14,7 +14,7 @@ class GenericWilsonDistribution(DistributionBase):
         centric: torch.Tensor,
         multiplicity: torch.Tensor,
         normalization_sigma: Optional[float | torch.Tensor] = 1.0,
-        single_wilson: bool = True,
+        single_wilson: Optional[bool] = True,
         correlation: Optional[torch.Tensor] = None,
     ) -> None:
         """
@@ -43,14 +43,13 @@ class GenericWilsonDistribution(DistributionBase):
         Args:
             centric (torch.Tensor): A tensor of shape (n_refln,).
             multiplicity (torch.Tensor): A tensor of shape (n_refln,).
-            normalization_sigma (float | torch.Tensor): Normalization sigma value. This represents
+            normalization_sigma (float | torch.Tensor, optional): Normalization sigma value. This represents
                 the average intensity stratified by a measure like resolution. If this is a tensor,
-                it must be of shape (n_refln,).
-            single_wilson (bool): If True, a single Wilson distribution is used for all reflections.
-                If False, a parent-child Wilson distribution is used for all reflections.
-            correlation (torch.Tensor, optional): A tensor of shape (n_refln,). If None,
-                a tensor of (n_refln,) zeros is used to represent single Wilson distributions.
-                Only used if single_wilson is False.
+                it must be of shape (n_refln,). Defaults to 1.0.
+            single_wilson (bool, optional): If True, a single Wilson distribution is used for all reflections.
+                If False, a parent-child Wilson distribution is used for all reflections. Defaults to True.
+            correlation (torch.Tensor, optional): A tensor of shape (n_refln,). Defaults to None, which
+                is equivalent to a tensor of (n_refln,) zeros. Only used if single_wilson is False.
         """
         self.centric = centric
         self.multiplicity = multiplicity
@@ -161,16 +160,19 @@ class MultiWilsonDistribution(DistributionBase):
 
 class WilsonPrior(PriorBase):
     def __init__(
-        self, rac: ReciprocalASUCollection, normalization_sigma: float = 1.0, **kwargs
+        self,
+        rac: ReciprocalASUCollection,
+        normalization_sigma: Optional[float | torch.Tensor] = 1.0,
+        **kwargs
     ) -> None:
         """
         Single Wilson prior for structure factor amplitudes.
 
         Args:
             rac (ReciprocalASUCollection): ReciprocalASUCollection instance.
-            normalization_sigma (float | torch.Tensor): Normalization sigma value.
+            normalization_sigma (float | torch.Tensor, optional): Normalization sigma value.
                 See GenericWilsonDistribution. If this is a tensor, it must be of shape
-                (rac_size,).
+                (rac_size,). Defaults to 1.0.
         """
         super().__init__(**kwargs)
         self.rac = rac
@@ -181,7 +183,7 @@ class WilsonPrior(PriorBase):
     ) -> GenericWilsonDistribution:
         """
         Args:
-            rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. If None,
+            rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. Defaults to None,
                 implicitly assumes rac.rasu_ids.
             hkl (torch.Tensor, optional): Miller indices to get distribution for. Only
                 used when rasu_id is not None and must have same length with rasu_id.
@@ -231,7 +233,7 @@ class MultiWilsonPrior(torch.nn.Module):
     ) -> MultiWilsonDistribution:
         """
         Args:
-            rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. If None,
+            rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. Defaults to None,
                 implicitly assumes rag.rasu_ids.
             hkl (torch.Tensor, optional): Miller indices to get distribution for. Only
                 used when rasu_id is not None and must have same length with rasu_id.

@@ -2,10 +2,7 @@ from typing import Optional
 
 import torch
 
-
-class DistributionBase:
-    def log_prob(self, z: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("Derived classes must implement log_prob()")
+from abismal_torch.distributions import DistributionBase
 
 
 class PriorBase(torch.nn.Module):
