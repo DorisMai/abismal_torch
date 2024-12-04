@@ -144,13 +144,6 @@ class MultiWilsonDistribution(DistributionBase):
         )
 
     def log_prob(self, z: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            z (torch.Tensor): A tensor of shape (mc_samples, n_reflections).
-
-        Returns:
-            torch.Tensor: A tensor of same shape as z containing the log probabilities.
-        """
         z_root = z
         z_parent = z[:, self.parent_reflection_ids]
         logprob_root = self.root_wilson.log_prob(z_root)
