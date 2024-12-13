@@ -11,3 +11,8 @@ class DistributionBase:
             torch.Tensor: A tensor of same shape as z containing the log probabilities.
         """
         raise NotImplementedError("Derived classes must implement log_prob()")
+
+
+class PosteriorDistributionBase(DistributionBase):
+    def rsample(self, *args, **kwargs) -> torch.Tensor:
+        raise NotImplementedError("Derived classes must implement rsample()")

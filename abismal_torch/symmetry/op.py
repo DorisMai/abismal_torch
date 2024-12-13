@@ -33,10 +33,7 @@ class Op(torch.nn.Module):
             "_den",
             torch.tensor(self.__gemmi_op__.DEN, dtype=_dtype),
         )
-        self.register_buffer(
-            "_identity",
-            torch.tensor(self.__gemmi_op__ == "x,y,z", dtype=torch.bool),
-        )
+        self._identity = self.__gemmi_op__ == "x,y,z"
 
     def __str__(self) -> str:
         return f"Op({self.__gemmi_op__.triplet()})"

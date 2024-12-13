@@ -1,1 +1,1 @@
-from .base import DistributionBase
+from .base import DistributionBase, PosteriorDistributionBase
