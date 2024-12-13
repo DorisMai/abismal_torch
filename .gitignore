@@ -8,5 +8,5 @@ coverage.xml
 dist/
 site/
 *.ipynb
-*/simple_matmul.py
-*/test_matmul.py
+abismal_torch/simple_matmul.py
+tests/test_matmul.py
