@@ -8,3 +8,5 @@ coverage.xml
 dist/
 site/
 *.ipynb
+*/simple_matmul.py
+*/test_matmul.py
