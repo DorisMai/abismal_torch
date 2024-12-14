@@ -1,4 +1,1 @@
-from .structure_factor.folded_normal import (
-    FoldedNormalPosterior,
-    MultivariateFoldedNormalPosterior,
-)
+from .structure_factor.folded_normal import FoldedNormalPosterior
