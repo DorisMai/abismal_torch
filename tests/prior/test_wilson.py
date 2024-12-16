@@ -9,39 +9,6 @@ from abismal_torch.symmetry import ReciprocalASU, ReciprocalASUGraph
 @pytest.mark.parametrize("parents", [None, torch.tensor([0, 0], dtype=torch.int32)])
 class TestWilson:
     @pytest.fixture
-    def rasu_params(self):
-        return {
-            "spacegroups": [gemmi.SpaceGroup(19), gemmi.SpaceGroup(4)],
-            "dmins": [5.1, 3.8],
-            "cell": gemmi.UnitCell(10.0, 20.0, 30.0, 90.0, 90.0, 90.0),
-        }
-
-    @pytest.fixture
-    def rag(self, rasu_params, anomalous, parents):
-        rasu1 = ReciprocalASU(
-            rasu_params["cell"],
-            rasu_params["spacegroups"][0],
-            rasu_params["dmins"][0],
-            anomalous,
-        )
-        rasu2 = ReciprocalASU(
-            rasu_params["cell"],
-            rasu_params["spacegroups"][1],
-            rasu_params["dmins"][1],
-            anomalous,
-        )
-        rag = ReciprocalASUGraph(rasu1, rasu2, parents=parents)
-        return rag
-
-    @pytest.fixture
-    def custom_params(self, rag):
-        custom_n_reflections = int(rag.rac_size * 1.2)
-        custom_id = torch.randint(0, rag.rac_size, (custom_n_reflections,))
-        custom_rasu_id = rag.rasu_ids[custom_id]
-        custom_hkl = rag.H_rasu[custom_id]
-        return custom_id, custom_rasu_id, custom_hkl
-
-    @pytest.fixture
     def z(self, rag, mc_samples=10):
         return torch.distributions.Exponential(rate=1).rsample(
             (mc_samples, rag.rac_size)
