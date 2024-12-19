@@ -14,39 +14,34 @@ def linear_out_size():
 
 
 @pytest.fixture
-def test_params():
-    return {"n_refln": 91, "n_feature": 18, "n_image": 7}
-
-
-@pytest.fixture
-def data(test_params):
+def data(data_params):
     return torch.rand(
-        (test_params["n_refln"], test_params["n_feature"]), dtype=torch.float32
+        (data_params["n_refln"], data_params["n_feature"]), dtype=torch.float32
     )
 
 
 @pytest.fixture
-def image_id(test_params):
-    return torch.randint(0, test_params["n_image"], (test_params["n_refln"],))
+def image_id(data_params):
+    return torch.randint(0, data_params["n_image"], (data_params["n_refln"],))
 
 
-def test_imageaverage(test_params, data, image_id):
+def test_imageaverage(data_params, data, image_id):
     average = ImageAverage()
     out = average(data, image_id)
-    assert out.shape == (test_params["n_image"], test_params["n_feature"])
+    assert out.shape == (data_params["n_image"], data_params["n_feature"])
 
     alternative_out = torch.full(
-        (test_params["n_image"], test_params["n_feature"]), np.nan
+        (data_params["n_image"], data_params["n_feature"]), np.nan
     )
-    for i in range(test_params["n_image"]):
+    for i in range(data_params["n_image"]):
         alternative_out[i] = data[image_id == i].mean(dim=0)
     assert torch.allclose(out, alternative_out)
 
 
-def test_lazylinear_shape(test_params, linear_out_size, data):
+def test_lazylinear_shape(data_params, linear_out_size, data):
     linear = CustomInitLazyLinear(linear_out_size)
     out = linear(data)
-    assert out.shape == (test_params["n_refln"], linear_out_size)
+    assert out.shape == (data_params["n_refln"], linear_out_size)
 
 
 @pytest.mark.parametrize("seed", [42])
@@ -107,15 +102,15 @@ def test_lazylinear_init(linear_out_size, seed, data):
     "dropout, hidden_units, activation, normalize",
     [(None, None, "ReLU", False), (0.2, 12, "SELU", True)],
 )
-def test_feedforward_shape(test_params, dropout, hidden_units, activation, normalize):
+def test_feedforward_shape(data_params, dropout, hidden_units, activation, normalize):
     data = torch.rand(
-        test_params["n_image"],
-        test_params["n_refln"],
-        test_params["n_feature"],
+        data_params["n_image"],
+        data_params["n_refln"],
+        data_params["n_feature"],
         dtype=torch.float32,
     )
     ff = FeedForward(
-        input_size=test_params["n_feature"],
+        input_size=data_params["n_feature"],
         hidden_units=hidden_units,
         dropout=dropout,
         activation=activation,
@@ -123,18 +118,18 @@ def test_feedforward_shape(test_params, dropout, hidden_units, activation, norma
     )
     out = ff(data)
     assert out.shape == (
-        test_params["n_image"],
-        test_params["n_refln"],
-        test_params["n_feature"],
+        data_params["n_image"],
+        data_params["n_refln"],
+        data_params["n_feature"],
     )
 
 
-def test_feedforward_glu_shape(test_params, data):
-    ff_glu = FeedForward_GLU(test_params["n_feature"])
+def test_feedforward_glu_shape(data_params, data):
+    ff_glu = FeedForward_GLU(data_params["n_feature"])
     out = ff_glu(data)
-    assert out.shape == (test_params["n_refln"], test_params["n_feature"])
+    assert out.shape == (data_params["n_refln"], data_params["n_feature"])
     # check if the number of parameters is the same as FFN without GLU
-    ff_nweights = 4 * test_params["n_feature"] ** 2
+    ff_nweights = 4 * data_params["n_feature"] ** 2
     ff_glu_nweights = sum(p.numel() for p in ff_glu.parameters())
     assert (
         ff_nweights == ff_glu_nweights
@@ -144,7 +139,7 @@ def test_feedforward_glu_shape(test_params, data):
 
 
 @pytest.mark.parametrize("hidden_units", [None, 7])
-def test_mlp_shape(test_params, hidden_units):
+def test_mlp_shape(data_params, hidden_units):
     custom_params = {
         "width": 16,
         "depth": 6,
@@ -156,9 +151,9 @@ def test_mlp_shape(test_params, hidden_units):
         "weight_initializer": torch.nn.init.ones_,
     }
     mlp = MLP(hidden_units=hidden_units, **custom_params)
-    data = torch.randn((test_params["n_refln"], test_params["n_feature"]))
+    data = torch.randn((data_params["n_refln"], data_params["n_feature"]))
     out = mlp(data)
-    assert out.shape == (test_params["n_refln"], custom_params["width"])
+    assert out.shape == (data_params["n_refln"], custom_params["width"])
     # check depth of MLP
     assert len(list(mlp.children())) == custom_params["depth"] + 1
     # check hidden_units
@@ -169,19 +164,18 @@ def test_mlp_shape(test_params, hidden_units):
 
 @pytest.mark.parametrize("share_weights", [True, False])
 @pytest.mark.parametrize("use_glu", [True, False])
-def test_image_scaler(test_params, data, image_id, share_weights, use_glu):
+def test_image_scaler(
+    data_params, custom_scaling_model_params, data, image_id, share_weights, use_glu
+):
     metadata = data
-    iobs = torch.randn(test_params["n_refln"], 1)
-    sigiobs = torch.randn(test_params["n_refln"], 1)
+    iobs = torch.randn(data_params["n_refln"], 1)
+    sigiobs = torch.randn(data_params["n_refln"], 1)
     inputs = (metadata, iobs, sigiobs)
     mc_samples = 8
-    custom_params = {
-        "mlp_width": 20,
-        "mlp_depth": 4,
-        "hidden_units": 15,
-        "use_glu": use_glu,
-    }
-    custom_scaling_model = ImageScaler(share_weights=share_weights, **custom_params)
+
+    custom_scaling_model = ImageScaler(
+        share_weights=share_weights, use_glu=use_glu, **custom_scaling_model_params
+    )
     _ = custom_scaling_model(inputs, image_id, mc_samples)
 
     if share_weights:
@@ -193,8 +187,8 @@ def test_image_scaler(test_params, data, image_id, share_weights, use_glu):
 
     if use_glu:
         assert custom_scaling_model.mlp[1].W.weight.T.shape == (
-            custom_params["mlp_width"],
-            custom_params["hidden_units"],
+            custom_scaling_model_params["mlp_width"],
+            custom_scaling_model_params["hidden_units"],
         )
         if share_weights:
             mlp_w = custom_scaling_model.mlp[-1].W2.weight
@@ -202,8 +196,8 @@ def test_image_scaler(test_params, data, image_id, share_weights, use_glu):
             assert torch.allclose(mlp_w, scale_mlp_w)
     else:
         assert custom_scaling_model.mlp[1].linear1.weight.T.shape == (
-            custom_params["mlp_width"],
-            custom_params["hidden_units"],
+            custom_scaling_model_params["mlp_width"],
+            custom_scaling_model_params["hidden_units"],
         )
         if share_weights:
             mlp_w = custom_scaling_model.mlp[-1].linear2.weight

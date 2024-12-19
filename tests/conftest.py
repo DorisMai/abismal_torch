@@ -39,3 +39,17 @@ def custom_params(rag):
     custom_rasu_id = rag.rasu_ids[custom_id]
     custom_hkl = rag.H_rasu[custom_id]
     return custom_id, custom_rasu_id, custom_hkl
+
+
+@pytest.fixture
+def data_params():
+    return {"n_refln": 91, "n_feature": 18, "n_image": 7}
+
+
+@pytest.fixture
+def custom_scaling_model_params():
+    return {
+        "mlp_width": 20,
+        "mlp_depth": 4,
+        "hidden_units": 15,
+    }

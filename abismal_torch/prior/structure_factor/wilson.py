@@ -107,6 +107,13 @@ class GenericWilsonDistribution(DistributionBase):
                 self.p_acentric(z).log_prob(z),
             )
 
+    def mean(self) -> torch.Tensor:
+        return torch.where(
+            self.centric,
+            self.p_centric().mean,
+            self.p_acentric().mean,
+        )
+
 
 class MultiWilsonDistribution(DistributionBase):
     def __init__(

@@ -26,11 +26,3 @@ class PosteriorBase(torch.nn.Module):
 
     def log_prob(self, z: torch.Tensor) -> torch.Tensor:
         return self.distribution.log_prob(z)
-
-    # def compute_kl_terms(self, prior, samples=None):
-    #     try:
-    #         kl_div = self.distribution().kl_divergence(prior)
-    #     except NotImplementedError:
-    #         kl_div = self.distribution().log_prob(samples) - prior.log_prob(samples)
-    #         kl_div = kl_div.mean(dim=0)
-    #     return kl_div
