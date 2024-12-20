@@ -79,6 +79,6 @@ class TestMerging:
         xout = merging_model(myinputs)
         assert xout["ipred_avg"].shape == (
             myinputs[-1].shape[0],
-        ), f"xout[ipred_aveg] shape is {xout["ipred_avg"].shape}"
-        assert xout["loss_nll"].shape == (), f"xout[loss_nll] is {xout["loss_nll"]}"
-        assert xout["loss_kl"].shape == (), f"xout[loss_kl] is {xout["loss_kl"]}"
+        ), f"xout[ipred_aveg] shape is {xout['ipred_avg'].shape}"
+        assert xout["loss_nll"].shape == (), f"xout[loss_nll] is {xout['loss_nll']}"
+        assert xout["loss_kl"].shape == (), f"xout[loss_kl] is {xout['loss_kl']}"
