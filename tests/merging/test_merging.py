@@ -75,10 +75,19 @@ class TestMerging:
             sigiobs,
         )
 
-    def test_merging(self, merging_model, myinputs):
+    @pytest.mark.parametrize("steps", [100])
+    def test_merging(self, merging_model, myinputs, steps):
         xout = merging_model(myinputs)
         assert xout["ipred_avg"].shape == (
             myinputs[-1].shape[0],
         ), f"xout[ipred_aveg] shape is {xout['ipred_avg'].shape}"
         assert xout["loss_nll"].shape == (), f"xout[loss_nll] is {xout['loss_nll']}"
         assert xout["loss_kl"].shape == (), f"xout[loss_kl] is {xout['loss_kl']}"
+
+        opt = torch.optim.Adam(merging_model.parameters())
+        for _ in range(steps):
+            opt.zero_grad()
+            xout = merging_model(myinputs)
+            loss = xout["loss_nll"] + xout["loss_kl"]
+            loss.backward()
+            opt.step()
