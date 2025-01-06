@@ -3,17 +3,17 @@ description = "Arguments affecting the model architecture and dimensions"
 
 args_and_kwargs = (
     (
-        ("--d-model",),
+        ("--mlp-width",),
         {
-            "help": "The number of channels (i.e. mlp_width) in the model with default 32.",
+            "help": "The number of channels (previously called d-model) in the model with default 32.",
             "default": 32,
             "type": int,
         },
     ),
     (
-        ("--layers",),
+        ("--mlp-depth",),
         {
-            "help": "The number of feedfoward units (i.e. mlp_depth) with default 20.",
+            "help": "The number of feedfoward units (previously called layers) with default 20.",
             "default": 20,
             "type": int,
         },

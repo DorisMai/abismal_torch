@@ -16,6 +16,7 @@ class ImageScaler(nn.Module):
         share_weights: Optional[bool] = True,
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
+        activation: Optional[str | nn.Module] = "ReLU",
         scaling_posterior: Optional[torch.distributions.Distribution] = td.Gamma,
         **kwargs
     ) -> None:
@@ -62,6 +63,7 @@ class ImageScaler(nn.Module):
             input_layer=False,
             hidden_units=hidden_units,
             use_glu=use_glu,
+            activation=activation,
         )
         if share_weights:
             self.scale_mlp = self.mlp
@@ -72,6 +74,7 @@ class ImageScaler(nn.Module):
                 input_layer=False,
                 hidden_units=hidden_units,
                 use_glu=use_glu,
+                activation=activation,
             )
         self.scaling_posterior = scaling_posterior
 
