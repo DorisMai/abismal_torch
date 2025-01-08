@@ -81,6 +81,8 @@ class FeedForward(nn.Module):
             self.hidden_units = 2 * self.input_size
         if isinstance(activation, str):
             self.activation = getattr(nn.modules.activation, activation)()
+        elif activation is None:
+            self.activation = nn.modules.activation.ReLU()
         else:
             self.activation = activation
         self.linear1 = CustomInitLazyLinear(
@@ -173,7 +175,7 @@ class FeedForward_GLU(nn.Module):
         if isinstance(self.activation, nn.Module):
             return self.activation(h1, h2)
 
-        if self.activation == "SwiGLU":
+        if self.activation is None or self.activation == "SwiGLU":
             return F.silu(h1) * h2
         elif self.activation == "GEGLU":
             return F.gelu(h1) * h2
