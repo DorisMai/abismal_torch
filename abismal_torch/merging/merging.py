@@ -108,7 +108,7 @@ class VariationalMergingModel(torch.nn.Module):
         """
         (
             image_id,
-            asu_id,
+            rasu_id,
             hkl_in,
             resolution,
             wavelength,
@@ -134,7 +134,7 @@ class VariationalMergingModel(torch.nn.Module):
         for op in self.reindexing_ops:
             _hkl = op(hkl_in)
             _ipred = self.surrogate_posterior.rac.gather(
-                z.T, asu_id, _hkl
+                z.T, rasu_id, _hkl
             )  # Shape (n_refln, mc_samples)
             _ipred = torch.square(_ipred) * scale
 
