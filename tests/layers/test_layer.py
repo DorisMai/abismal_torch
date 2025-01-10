@@ -179,11 +179,11 @@ def test_image_scaler(
     _ = custom_scaling_model(inputs, image_id, mc_samples)
 
     if share_weights:
-        # image_linear_in, scale_linear_in, linear_out, pool, mlp
-        assert len(list(custom_scaling_model.children())) == 5
+        # image_linear_in, scale_linear_in, linear_out, pool, mlp, 2 standardizations
+        assert len(list(custom_scaling_model.children())) == 7
     else:
-        # image_linear_in, scale_linear_in, linear_out, pool, mlp, scale_mlp
-        assert len(list(custom_scaling_model.children())) == 6
+        # image_linear_in, scale_linear_in, linear_out, pool, mlp, scale_mlp, 2 standardizations
+        assert len(list(custom_scaling_model.children())) == 8
 
     if use_glu:
         assert custom_scaling_model.mlp[1].W.weight.T.shape == (
