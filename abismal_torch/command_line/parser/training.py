@@ -59,11 +59,19 @@ args_and_kwargs = (
             "type": int,
         },
     ),
+    # (
+    #     ("--disable-index-disambiguation",),
+    #     {
+    #         "help": "Disable index disambiguation if applicable to the space group.",
+    #         "action": "store_true",
+    #     },
+    # ),
     (
-        ("--disable-index-disambiguation",),
+        ("--seed",),
         {
-            "help": "Disable index disambiguation if applicable to the space group.",
-            "action": "store_true",
+            "help": "The seed for the random number generator.",
+            "default": 1234,
+            "type": int,
         },
     ),
 )

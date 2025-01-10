@@ -38,7 +38,14 @@ class AbismalLitModule(L.LightningModule):
         return val_loss
 
     def configure_optimizers(self):
-        opt = Adam(self.merging_model.parameters(), **self.optimizer_kwargs)
+        # renaming arguments for Adam optimizer
+        optimzer_kwargs = {
+            "lr": self.optimizer_kwargs["learning_rate"],
+            "betas": (self.optimizer_kwargs["beta_1"], self.optimizer_kwargs["beta_2"]),
+            "eps": self.optimizer_kwargs["adam_epsilon"],
+            "amsgrad": self.optimizer_kwargs["amsgrad"],
+        }
+        opt = Adam(self.merging_model.parameters(), **optimzer_kwargs)
         return opt
 
 
@@ -92,6 +99,31 @@ def main():
 
     args, arg_groups = _group_args(parser)
 
+    L.seed_everything(args.seed)
+
+    from abismal_torch.io.manager import MTZDataModule
+
+    mtz_file = args.inputs[0]
+    data = MTZDataModule(
+        mtz_file,
+        batch_size=args.batch_size,
+        num_workers=args.num_cpus,
+        dmin=args.dmin,
+        wavelength=args.wavelength,
+    )
+
+    from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
+
+    rasu = ReciprocalASU(
+        data.dataset.cell,
+        data.dataset.spacegroup,
+        data.dataset.dmin,
+        anomalous=False,
+    )
+    rac = ReciprocalASUGraph(rasu)
+    # rac = _get_rasu()
+    print(rac.rac_size)
+
     from abismal_torch.scaling import ImageScaler
 
     scaling_model = ImageScaler(**arg_groups["Architecture"].__dict__)
@@ -99,8 +131,6 @@ def main():
     from abismal_torch.likelihood import StudentTLikelihood
 
     likelihood = StudentTLikelihood(args.studentt_dof)
-
-    rac = _get_rasu()
 
     from abismal_torch.prior import WilsonPrior
 
@@ -128,8 +158,14 @@ def main():
     opt_args = arg_groups["Optimizer"].__dict__
     model = AbismalLitModule(merging_model, opt_args, kl_weight=args.kl_weight)
 
-    print("done construction")
-    print(args)
+    trainer = L.Trainer(
+        deterministic=True,
+        accelerator="cpu",
+        max_epochs=args.epochs,
+        max_steps=args.steps_per_epoch * args.epochs,
+    )
+    trainer.fit(model, data)
+    print("done training")
 
 
 if __name__ == "__main__":
