@@ -19,6 +19,21 @@ class MTZDataset(Dataset):
         rasu_id: Optional[int] = 0,
         dmin: Optional[float] = None,
     ):
+        """
+        Custom Pytorch Dataset Class for MTZ files.
+
+        Args:
+            mtz_file (str): a path to the MTZ file.
+            cell (list[float], optional): a list of cell parameters. If provided, overrides the cell parameters in the MTZ file.
+            spacegroup (str, optional): a spacegroup symbol. If provided, overrides the spacegroup in the MTZ file.
+            batch_key (str, optional): a key for the batch or image. If not provided, the first column of type B is used.
+            intensity_key (str, optional): a key for the intensity. If not provided, the first column of type J is used.
+            sigma_key (str, optional): a key for the intensity uncertainty. If not provided, the first column of type Q is used.
+            metadata_keys (list[str], optional): a list of metadata keys. Defaults to ["XDET", "YDET"].
+            wavelength (float, optional): a wavelength. Defaults to 1.0.
+            rasu_id (int, optional): a rasu id. Defaults to 0.
+            dmin (float, optional): Highest resolution to include.
+        """
         ds = rs.read_mtz(mtz_file)
         self.cell = cell
         self.spacegroup = spacegroup

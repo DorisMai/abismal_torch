@@ -67,40 +67,15 @@ def _group_args(parser):
     return args, arg_groups
 
 
-def _get_rasu():
-    import gemmi
-
-    from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
-
-    rasu_params = {
-        "spacegroups": [gemmi.SpaceGroup(19), gemmi.SpaceGroup(4)],
-        "dmins": [9.1, 8.8],
-        "cell": gemmi.UnitCell(10.0, 20.0, 30.0, 90.0, 90.0, 90.0),
-    }
-    anomalous = False
-    rasu1 = ReciprocalASU(
-        rasu_params["cell"],
-        rasu_params["spacegroups"][0],
-        rasu_params["dmins"][0],
-        anomalous,
-    )
-    rasu2 = ReciprocalASU(
-        rasu_params["cell"],
-        rasu_params["spacegroups"][1],
-        rasu_params["dmins"][1],
-        anomalous,
-    )
-    rag = ReciprocalASUGraph(rasu1, rasu2)
-    return rag
-
-
 def main():
+    # ========== parse arguments ==========#
     from abismal_torch.command_line.parser import parser
 
     args, arg_groups = _group_args(parser)
 
     L.seed_everything(args.seed)
 
+    # ========== load data ==========#
     from abismal_torch.io.manager import MTZDataModule
 
     mtz_file = args.inputs[0]
@@ -112,18 +87,21 @@ def main():
         wavelength=args.wavelength,
     )
 
+    # ========== construct RASU ==========#
     from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
 
-    rasu = ReciprocalASU(
-        data.dataset.cell,
-        data.dataset.spacegroup,
-        data.dataset.dmin,
-        anomalous=False,
-    )
-    rac = ReciprocalASUGraph(rasu)
-    # rac = _get_rasu()
-    print(rac.rac_size)
+    rasus = []
+    for dataset in data.dataset.datasets:
+        rasu = ReciprocalASU(
+            dataset.cell,
+            dataset.spacegroup,
+            dataset.dmin,
+            anomalous=args.anomalous,
+        )
+        rasus.append(rasu)
+    rac = ReciprocalASUGraph(*rasus)
 
+    # ========== construct model components==========#
     from abismal_torch.scaling import ImageScaler
 
     scaling_model = ImageScaler(**arg_groups["Architecture"].__dict__)
@@ -155,6 +133,7 @@ def main():
         reindexing_ops=args.reindexing_ops,
     )
 
+    # ========== Lightning training ==========#
     opt_args = arg_groups["Optimizer"].__dict__
     model = AbismalLitModule(merging_model, opt_args, kl_weight=args.kl_weight)
 
@@ -165,7 +144,6 @@ def main():
         max_steps=args.steps_per_epoch * args.epochs,
     )
     trainer.fit(model, data)
-    print("done training")
 
 
 if __name__ == "__main__":
