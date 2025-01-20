@@ -88,7 +88,7 @@ class VariationalMergingModel(torch.nn.Module):
         averaged = _averaged.sum(dim=1) / n_reflns_per_image / mc_samples
         return averaged
 
-    def forward(self, inputs: Tuple[torch.Tensor, ...]) -> dict:
+    def forward(self, inputs: dict[str, torch.Tensor]) -> dict:
         """
         The predicted intensities are computed as:
         ```
@@ -98,7 +98,7 @@ class VariationalMergingModel(torch.nn.Module):
         the negative log-likelihood loss.
 
         Args:
-            inputs (Tuple[torch.Tensor, ...]): Inputs to the model.
+            inputs (dict[str, torch.Tensor]): Inputs to the model.
 
         Returns:
             dict: Contains the following keys:
@@ -106,16 +106,11 @@ class VariationalMergingModel(torch.nn.Module):
                 - loss_ll: Negative log-likelihood loss
                 - loss_kl: KL divergence loss
         """
-        (
-            image_id,
-            rasu_id,
-            hkl_in,
-            resolution,
-            wavelength,
-            metadata,
-            iobs,
-            sigiobs,
-        ) = inputs
+        image_id = inputs["image_id"]
+        rasu_id = inputs["rasu_id"]
+        hkl_in = inputs["hkl_in"]
+        iobs = inputs["iobs"]
+        sigiobs = inputs["sigiobs"]
 
         scale = self.scale_model(
             inputs,
@@ -160,4 +155,5 @@ class VariationalMergingModel(torch.nn.Module):
             "ipred_avg": ipred_avg,
             "loss_nll": -ll.mean(),
             "loss_kl": kl_div.mean(),
+            "hkl": hkl,
         }

@@ -64,22 +64,22 @@ class TestMerging:
         iobs = torch.randn(n_refln, 1)
         sigiobs = torch.rand(n_refln, 1)
 
-        return (
-            image_id,
-            asu_id,
-            hkl_in,
-            resolution,
-            wavelength,
-            metadata,
-            iobs,
-            sigiobs,
-        )
+        return {
+            "image_id": torch.randint(0, n_image, (n_refln,)),
+            "rasu_id": sampled_indices[:, 0],
+            "hkl_in": sampled_indices[:, 1:],
+            "resolution": torch.rand(n_refln, 1),
+            "wavelength": torch.ones(n_refln, 1),
+            "metadata": torch.rand(n_refln, n_feature),
+            "iobs": torch.randn(n_refln, 1),
+            "sigiobs": torch.rand(n_refln, 1),
+        }
 
     @pytest.mark.parametrize("steps", [100])
     def test_merging(self, merging_model, myinputs, steps):
         xout = merging_model(myinputs)
         assert xout["ipred_avg"].shape == (
-            myinputs[-1].shape[0],
+            myinputs["iobs"].shape[0],
         ), f"xout[ipred_aveg] shape is {xout['ipred_avg'].shape}"
         assert xout["loss_nll"].shape == (), f"xout[loss_nll] is {xout['loss_nll']}"
         assert xout["loss_kl"].shape == (), f"xout[loss_kl] is {xout['loss_kl']}"

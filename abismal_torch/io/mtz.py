@@ -85,16 +85,16 @@ class MTZDataset(Dataset):
         return len(self.Iobs)
 
     def __getitem__(self, idx):
-        return (
-            self.image_id[idx],
-            self.rasu_id[idx],
-            self.hkl_in[idx],
-            self.resolution[idx],
-            self.wavelength[idx],
-            self.metadata[idx],
-            self.Iobs[idx],
-            self.SigIobs[idx],
-        )
+        return {
+            "image_id": self.image_id[idx],
+            "rasu_id": self.rasu_id[idx],
+            "hkl_in": self.hkl_in[idx],
+            "resolution": self.resolution[idx],
+            "wavelength": self.wavelength[idx],
+            "metadata": self.metadata[idx],
+            "iobs": self.Iobs[idx],
+            "sigiobs": self.SigIobs[idx],
+        }
 
     def _get_first_key_of_type(self, ds, dtype):
         idx = ds.dtypes == dtype

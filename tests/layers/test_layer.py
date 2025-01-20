@@ -170,7 +170,11 @@ def test_image_scaler(
     metadata = data
     iobs = torch.randn(data_params["n_refln"], 1)
     sigiobs = torch.randn(data_params["n_refln"], 1)
-    inputs = (metadata, iobs, sigiobs)
+    inputs = {
+        "metadata": metadata,
+        "iobs": iobs,
+        "sigiobs": sigiobs,
+    }
     mc_samples = 8
 
     custom_scaling_model = ImageScaler(

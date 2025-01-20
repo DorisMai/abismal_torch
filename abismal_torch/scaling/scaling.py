@@ -98,18 +98,20 @@ class ImageScaler(nn.Module):
             z (torch.Tensor): shape (mc_samples, n_reflns), samples from the learned scaling
                 posterior.
         """
-        metadata, iobs, sigiobs = inputs[-3], inputs[-2], inputs[-1]
-        print("Before standardization")
-        print(metadata)
-        print(iobs)
-        print(sigiobs)
+        metadata = inputs["metadata"]
+        iobs = inputs["iobs"]
+        sigiobs = inputs["sigiobs"]
+        # print("Before standardization")
+        # print(metadata)
+        # print(iobs)
+        # print(sigiobs)
         metadata = self.standardize_metadata(metadata)
         iobs = self.standardize_intensity(iobs)
         sigiobs = self.standardize_intensity(sigiobs)
-        print("After standardization")
-        print(metadata)
-        print(iobs)
-        print(sigiobs)
+        # print("After standardization")
+        # print(metadata)
+        # print(iobs)
+        # print(sigiobs)
 
         if len(iobs.shape) == 1:
             iobs = iobs[:, None]
@@ -133,13 +135,13 @@ class ImageScaler(nn.Module):
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
-        print(scaling_params)
+        # print(scaling_params)
         # transform scaling_params to satisfy distribution constraints
         for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
             scaling_params[:, i] = torch.distributions.transform_to(constraint)(
                 scaling_params[:, i]
             )
-        print(scaling_params)
+        # print(scaling_params)
         q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
 
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
