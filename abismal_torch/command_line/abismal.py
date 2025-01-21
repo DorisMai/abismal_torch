@@ -1,7 +1,9 @@
-from typing import Optional
+from typing import Any, Optional
 
 import lightning as L
 from torch.optim import Adam
+
+from abismal_torch.callbacks import MTZSaver
 
 
 class AbismalLitModule(L.LightningModule):
@@ -21,6 +23,9 @@ class AbismalLitModule(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         xout = self.merging_model(batch)
+        self.merging_model.surrogate_posterior.update_observed(
+            batch["rasu_id"], xout["hkl"]
+        )
         loss = xout["loss_nll"] + self.kl_weight * xout["loss_kl"]
         self.log_dict({"loss": loss, "NLL": xout["loss_nll"], "KL": xout["loss_kl"]})
         return loss
@@ -78,9 +83,8 @@ def main():
     # ========== load data ==========#
     from abismal_torch.io.manager import MTZDataModule
 
-    mtz_file = args.inputs[0]
     data = MTZDataModule(
-        mtz_file,
+        args.inputs,
         batch_size=args.batch_size,
         num_workers=args.num_cpus,
         dmin=args.dmin,
@@ -134,16 +138,24 @@ def main():
     )
 
     # ========== Lightning training ==========#
-    opt_args = arg_groups["Optimizer"].__dict__
-    model = AbismalLitModule(merging_model, opt_args, kl_weight=args.kl_weight)
-
+    model = AbismalLitModule(
+        merging_model, arg_groups["Optimizer"].__dict__, kl_weight=args.kl_weight
+    )
+    callbacks = [MTZSaver(out_dir=args.out_dir)]
     trainer = L.Trainer(
         deterministic=True,
         accelerator="cpu",
         max_epochs=args.epochs,
         max_steps=args.steps_per_epoch * args.epochs,
+        default_root_dir=args.out_dir,
+        callbacks=callbacks,
     )
     trainer.fit(model, data)
+
+    for rasu_id, dataset in enumerate(
+        model.merging_model.surrogate_posterior.to_dataset()
+    ):
+        print("Processing dataset", rasu_id, "with cell", dataset.cell)
 
 
 if __name__ == "__main__":
