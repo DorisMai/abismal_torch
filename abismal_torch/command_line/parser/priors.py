@@ -63,4 +63,15 @@ args_and_kwargs = (
             "type": list_of_ops,
         },
     ),
+    (
+        ("--rasu-ids",),
+        {
+            "help": "The reciprocal asymmetric unit (RASU) ids corresponding to the input files. "
+            "Supply a comma-separated list of integers starting from 0. If not provided, each input\
+            file will be assigned a unique RASU id. Merging output files are saved per RASU."
+            'For example, --rasu-ids "0,1,0". ',
+            "default": None,
+            "type": list_of_ints,
+        },
+    ),
 )

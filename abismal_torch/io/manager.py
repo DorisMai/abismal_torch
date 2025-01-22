@@ -16,6 +16,7 @@ class MTZDataModule(L.LightningDataModule):
         wavelength: Optional[float] = None,
         test_fraction: Optional[float] = 0.05,
         num_workers: Optional[int] = 1,
+        rasu_ids: Optional[List[int]] = None,
     ):
         """
         Load MTZ files using LightningDataModule.
@@ -33,13 +34,14 @@ class MTZDataModule(L.LightningDataModule):
             mtz_files = [mtz_files]
 
         datasets = []
-        rasu_id = 0
-        for mtz_file in mtz_files:
+        if rasu_ids is None:
+            rasu_ids = list(range(len(mtz_files)))
+        self._rasu_ids = rasu_ids
+        for mtz_file, rasu_id in zip(mtz_files, rasu_ids):
             dataset = MTZDataset(
                 mtz_file, dmin=dmin, wavelength=wavelength, rasu_id=rasu_id
             )
             datasets.append(dataset)
-            rasu_id += 1
         self.dataset = ConcatDataset(datasets)
         self.batch_size = batch_size
         self.num_workers = num_workers

@@ -89,17 +89,22 @@ def main():
         num_workers=args.num_cpus,
         dmin=args.dmin,
         wavelength=args.wavelength,
+        rasu_ids=args.rasu_ids,
     )
 
     # ========== construct RASU ==========#
     from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
 
     rasus = []
-    for dataset in data.dataset.datasets:
+    num_rasus = len(set(data._rasu_ids))
+    for rasu_id in range(num_rasus):
+        # Only info (i.e. cell, spacegroup, dmin) from the first dataset of each RASU
+        # is used to construct the ReciprocalASU object.
+        dataset_idx = data._rasu_ids.index(rasu_id)
         rasu = ReciprocalASU(
-            dataset.cell,
-            dataset.spacegroup,
-            dataset.dmin,
+            data.dataset.datasets[dataset_idx].cell,
+            data.dataset.datasets[dataset_idx].spacegroup,
+            data.dataset.datasets[dataset_idx].dmin,
             anomalous=args.anomalous,
         )
         rasus.append(rasu)
@@ -151,11 +156,6 @@ def main():
         callbacks=callbacks,
     )
     trainer.fit(model, data)
-
-    for rasu_id, dataset in enumerate(
-        model.merging_model.surrogate_posterior.to_dataset()
-    ):
-        print("Processing dataset", rasu_id, "with cell", dataset.cell)
 
 
 if __name__ == "__main__":

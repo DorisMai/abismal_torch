@@ -17,7 +17,8 @@ args_and_kwargs = (
     (
         ("--num-cpus",),
         {
-            "help": "Number of CPUs to use for parsing CrystFEL .stream files with default 1.",
+            "help": "Number of CPUs to use for parsing CrystFEL .stream files with default 1.\
+             This number is also used as num_workers for the DataLoader.",
             "default": 1,
             "type": int,
         },
@@ -37,11 +38,11 @@ args_and_kwargs = (
             "help": "Override the wavelengths inferred from the inputs.",
         },
     ),
-    (
-        ("--separate",),
-        {
-            "help": "Merge the contents of each input file into a separate output file. ",
-            "action": "store_true",
-        },
-    ),
+    # (
+    #     ("--separate",),
+    #     {
+    #         "help": "Merge the contents of each input file into a separate output file. ",
+    #         "action": "store_true",
+    #     },
+    # ),
 )
