@@ -3,8 +3,8 @@ from typing import Optional, Sequence
 import torch
 import torch.distributions as td
 import torch.nn as nn
-from rs_distributions import distributions as rsd
 
+from abismal_torch.distributions import compute_kl_divergence
 from abismal_torch.layers import *
 
 
@@ -18,6 +18,10 @@ class ImageScaler(nn.Module):
         use_glu: Optional[bool] = False,
         activation: Optional[str | nn.Module] = "ReLU",
         scaling_posterior: Optional[torch.distributions.Distribution] = td.Gamma,
+        scaling_kl_weight: Optional[float] = 0.01,
+        scaling_prior: Optional[torch.distributions.Distribution] = td.Laplace(
+            0.0, 1.0
+        ),
         **kwargs
     ) -> None:
         """
@@ -47,8 +51,13 @@ class ImageScaler(nn.Module):
                 image and the scale MLPs.
             hidden_units (int, optional): int, see FeedForward argument.
             use_glu (bool, optional): bool, see MLP argument.
-            scaling_posterior (torch.distributions.Distribution, optional): the scaling
-                posterior distribution.
+            scaling_posterior (torch.distributions.Distribution, optional): distribution class for
+                the scaling posterior distribution. Defaults to a Gamma distribution.
+            scaling_kl_weight (float, optional): float, the weight of the KL divergence
+                loss between the scaling posterior and the scaling prior. Defaults to 0.01.
+            scaling_prior (torch.distributions.Distribution, optional): instantiated distribution
+                for the scaling prior. Defaults to a Laplace distribution with mean 0.0 and
+                scale 1.0.
         """
         super().__init__(**kwargs)
         self.standardize_intensity = Standardization(center=False)
@@ -79,6 +88,8 @@ class ImageScaler(nn.Module):
                 activation=activation,
             )
         self.scaling_posterior = scaling_posterior
+        self.scaling_kl_weight = scaling_kl_weight
+        self.scaling_prior = scaling_prior
 
     def forward(
         self,
@@ -135,15 +146,15 @@ class ImageScaler(nn.Module):
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
-        # print(scaling_params)
+
         # transform scaling_params to satisfy distribution constraints
         for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
             scaling_params[:, i] = torch.distributions.transform_to(constraint)(
                 scaling_params[:, i]
             )
-        # print(scaling_params)
-        q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
 
+        q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
-        z = torch.t(z)  # Shape (n_reflns, mc_samples)
-        return z
+        p = self.scaling_prior.expand((len(scaling_params),))
+        kl_div = compute_kl_divergence(q, p, samples=z)
+        return {"z": torch.t(z), "kl_div": kl_div}  # Shape (n_reflns, mc_samples)

@@ -27,7 +27,14 @@ class AbismalLitModule(L.LightningModule):
             batch["rasu_id"], xout["hkl"]
         )
         loss = xout["loss_nll"] + self.kl_weight * xout["loss_kl"]
-        self.log_dict({"loss": loss, "NLL": xout["loss_nll"], "KL": xout["loss_kl"]})
+        self.log_dict(
+            {
+                "loss": loss,
+                "NLL": xout["loss_nll"],
+                "KL": xout["loss_kl"],
+                "scale_KL": xout["scale_kl_div"],
+            }
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -38,6 +45,7 @@ class AbismalLitModule(L.LightningModule):
                 "val_loss": val_loss,
                 "val_NLL": xout["loss_nll"],
                 "val_KL": xout["loss_kl"],
+                "val_scale_KL": xout["scale_kl_div"],
             }
         )
         return val_loss
@@ -113,7 +121,10 @@ def main():
     # ========== construct model components==========#
     from abismal_torch.scaling import ImageScaler
 
-    scaling_model = ImageScaler(**arg_groups["Architecture"].__dict__)
+    scaling_model = ImageScaler(
+        **arg_groups["Architecture"].__dict__,
+        scaling_kl_weight=args.scale_kl_weight,
+    )
 
     from abismal_torch.likelihood import StudentTLikelihood
 

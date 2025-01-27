@@ -2,7 +2,7 @@ from typing import Optional, Sequence, Tuple
 
 import torch
 
-from abismal_torch.distributions import DistributionBase
+from abismal_torch.distributions import compute_kl_divergence
 from abismal_torch.prior.base import PriorBase
 from abismal_torch.surrogate_posterior.base import PosteriorBase
 from abismal_torch.symmetry import Op
@@ -40,30 +40,6 @@ class VariationalMergingModel(torch.nn.Module):
         if reindexing_ops is None:
             reindexing_ops = ["x,y,z"]
         self.reindexing_ops = [Op(op) for op in reindexing_ops]
-
-    def compute_kl_divergence(
-        self,
-        q: DistributionBase | torch.distributions.Distribution,
-        p: DistributionBase | torch.distributions.Distribution,
-        samples: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        """
-        Compute the KL divergence between the surrogate posterior and the prior.
-
-        Args:
-            q (Distribution): The surrogate posterior.
-            p (Distribution): The prior.
-            samples (torch.Tensor, optional): Samples from the surrogate posterior. Only used
-                if no KL divergence is implemented for the posterior-prior pair.
-
-        Returns:
-            KL divergence (torch.Tensor): A tensor of shape (Distribution's batch_shape,).
-        """
-        try:
-            return q.kl_divergence(p, samples=samples)
-        except AttributeError or NotImplementedError:
-            kl_div = q.log_prob(samples) - p.log_prob(samples)
-            return kl_div.mean(dim=0)
 
     def average_by_images(
         self, source_value: torch.Tensor, image_id: torch.Tensor
@@ -112,16 +88,18 @@ class VariationalMergingModel(torch.nn.Module):
         iobs = inputs["iobs"]
         sigiobs = inputs["sigiobs"]
 
-        scale = self.scale_model(
+        scale_outputs = self.scale_model(
             inputs,
             image_id=image_id,
             mc_samples=self.mc_samples,
         )
+        scale = scale_outputs["z"]
+        scale_kl_div = scale_outputs["kl_div"]
 
-        q = self.surrogate_posterior  # .distribution()
+        q = self.surrogate_posterior
         p = self.prior.distribution()
         z = q.rsample((self.mc_samples,))  # Shape (mc_samples, rac_size)
-        kl_div = self.compute_kl_divergence(q, p, samples=z)
+        kl_div = compute_kl_divergence(q, p, samples=z)
 
         ll = None
         ipred = None
@@ -155,5 +133,6 @@ class VariationalMergingModel(torch.nn.Module):
             "ipred_avg": ipred_avg,
             "loss_nll": -ll.mean(),
             "loss_kl": kl_div.mean(),
+            "scale_kl_div": scale_kl_div.mean(),
             "hkl": hkl,
         }
