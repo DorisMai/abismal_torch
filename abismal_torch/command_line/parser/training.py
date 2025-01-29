@@ -74,4 +74,12 @@ args_and_kwargs = (
             "type": int,
         },
     ),
+    (
+        ("--accelerator",),
+        {
+            "help": "The accelerator to use for training.",
+            "default": "cpu",
+            "type": str,
+        },
+    ),
 )

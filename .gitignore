@@ -12,3 +12,4 @@ lightning_logs/
 abismal_torch/simple_matmul.py
 tests/test_matmul.py
 tmp_outdir/
+tests/test_mtz.sh

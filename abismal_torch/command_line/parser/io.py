@@ -38,6 +38,14 @@ args_and_kwargs = (
             "help": "Override the wavelengths inferred from the inputs.",
         },
     ),
+    (
+        ("--ckpt-path",),
+        {
+            "help": "Path to a checkpoint file to resume training from.",
+            "default": None,
+            "type": str,
+        },
+    ),
     # (
     #     ("--separate",),
     #     {

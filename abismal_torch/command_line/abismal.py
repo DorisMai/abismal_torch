@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 import lightning as L
+from lightning.pytorch.callbacks import ModelCheckpoint
 from torch.optim import Adam
 
 from abismal_torch.callbacks import MTZSaver
@@ -17,6 +18,7 @@ class AbismalLitModule(L.LightningModule):
             epsilon (float, optional): Epsilon for numerical stability. Defaults to 1e-6.
         """
         super().__init__()
+        self.save_hyperparameters(ignore=["merging_model"])
         self.merging_model = merging_model
         self.kl_weight = kl_weight
         self.optimizer_kwargs = optimizer_kwargs
@@ -157,16 +159,19 @@ def main():
     model = AbismalLitModule(
         merging_model, arg_groups["Optimizer"].__dict__, kl_weight=args.kl_weight
     )
-    callbacks = [MTZSaver(out_dir=args.out_dir)]
+    callbacks = [
+        MTZSaver(out_dir=args.out_dir, every_n_steps=args.steps_per_epoch),
+        ModelCheckpoint(dirpath=args.out_dir, filename="model_{epoch:02d}"),
+    ]
     trainer = L.Trainer(
         deterministic=True,
-        accelerator="cpu",
+        accelerator=args.accelerator,
         max_epochs=args.epochs,
-        max_steps=args.steps_per_epoch * args.epochs,
         default_root_dir=args.out_dir,
         callbacks=callbacks,
+        log_every_n_steps=1,
     )
-    trainer.fit(model, data)
+    trainer.fit(model, data, ckpt_path=args.ckpt_path)
 
 
 if __name__ == "__main__":
