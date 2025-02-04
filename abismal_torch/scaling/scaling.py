@@ -60,8 +60,6 @@ class ImageScaler(nn.Module):
                 scale 1.0.
         """
         super().__init__(**kwargs)
-        self.standardize_intensity = Standardization(center=False)
-        self.standardize_metadata = Standardization()
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
         self.scale_linear_in = CustomInitLazyLinear(mlp_width)
         num_distribution_args = len(scaling_posterior.arg_constraints)
@@ -91,6 +89,22 @@ class ImageScaler(nn.Module):
         self.scaling_kl_weight = scaling_kl_weight
         self.scaling_prior = scaling_prior
 
+    def _create_image(self, inputs: dict[str, torch.Tensor]) -> torch.Tensor:
+        """
+        Create the image tensor for the MLP after properly reshaping and concatenating inputs.
+        """
+        metadata = inputs["metadata"]
+        iobs = inputs["iobs"]
+        sigiobs = inputs["sigiobs"]
+        if len(iobs.shape) == 1:
+            iobs = iobs[:, None]
+        if len(sigiobs.shape) == 1:
+            sigiobs = sigiobs[:, None]
+        image = torch.concat(
+            (metadata, iobs, sigiobs), axis=-1
+        )  # Shape (n_reflns, n_features + 2)
+        return image
+
     def forward(
         self,
         inputs: Sequence[torch.Tensor],
@@ -110,28 +124,7 @@ class ImageScaler(nn.Module):
                 posterior.
         """
         metadata = inputs["metadata"]
-        iobs = inputs["iobs"]
-        sigiobs = inputs["sigiobs"]
-        # print("Before standardization")
-        # print(metadata)
-        # print(iobs)
-        # print(sigiobs)
-        metadata = self.standardize_metadata(metadata)
-        iobs = self.standardize_intensity(iobs)
-        sigiobs = self.standardize_intensity(sigiobs)
-        # print("After standardization")
-        # print(metadata)
-        # print(iobs)
-        # print(sigiobs)
-
-        if len(iobs.shape) == 1:
-            iobs = iobs[:, None]
-        if len(sigiobs.shape) == 1:
-            sigiobs = sigiobs[:, None]
-        image = torch.concat(
-            (metadata, iobs, sigiobs), axis=-1
-        )  # Shape (n_reflns, n_features + 2)
-
+        image = self._create_image(inputs)  # Shape (n_reflns, n_features + 2)
         image_embeddings = self.image_linear_in(image)  # Shape (n_reflns, mlp_width)
         image_embeddings = self.mlp(image_embeddings)  # Shape (n_reflns, mlp_width)
         image_embeddings = self.pool(

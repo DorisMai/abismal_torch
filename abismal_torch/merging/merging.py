@@ -3,6 +3,7 @@ from typing import Optional, Sequence, Tuple
 import torch
 
 from abismal_torch.distributions import compute_kl_divergence
+from abismal_torch.layers import LazyWelfordStandardization as Standardization
 from abismal_torch.prior.base import PriorBase
 from abismal_torch.surrogate_posterior.base import PosteriorBase
 from abismal_torch.symmetry import Op
@@ -29,7 +30,10 @@ class VariationalMergingModel(torch.nn.Module):
             likelihood (torch.nn.Module): Likelihood model.
             mc_samples (int, optional): Number of Monte Carlo samples to average loss over. Defaults to 1.
             reindexing_ops (Sequence[str], optional): Reindexing operations. Defaults to identity ["x,y,z"].
-            standardization_count_max (int, optional): Standardization count max. Defaults to 2_000.
+
+        Attributes:
+            standardize_intensity (torch.nn.Module): Standardization layer for intensity data.
+            standardize_metadata (torch.nn.Module): Standardization layer for metadata data.
         """
         super().__init__(**kwargs)
         self.likelihood = likelihood
@@ -40,6 +44,8 @@ class VariationalMergingModel(torch.nn.Module):
         if reindexing_ops is None:
             reindexing_ops = ["x,y,z"]
         self.reindexing_ops = [Op(op) for op in reindexing_ops]
+        self.standardize_intensity = Standardization(center=False)
+        self.standardize_metadata = Standardization(center=True)
 
     def average_by_images(
         self, source_value: torch.Tensor, image_id: torch.Tensor
@@ -64,6 +70,22 @@ class VariationalMergingModel(torch.nn.Module):
         averaged = _averaged.sum(dim=1) / n_reflns_per_image / mc_samples
         return averaged
 
+    def standardize_inputs(
+        self, inputs: dict[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
+        metadata = inputs["metadata"]
+        iobs = inputs["iobs"]
+        sigiobs = inputs["sigiobs"]
+        metadata = self.standardize_metadata(metadata)
+        iobs = self.standardize_intensity(iobs)
+        sigiobs = self.standardize_intensity.standardize(
+            sigiobs
+        )  # error propagation without updating running stats
+        inputs["metadata"] = metadata
+        inputs["iobs"] = iobs
+        inputs["sigiobs"] = sigiobs
+        return inputs
+
     def forward(self, inputs: dict[str, torch.Tensor]) -> dict:
         """
         The predicted intensities are computed as:
@@ -82,12 +104,14 @@ class VariationalMergingModel(torch.nn.Module):
                 - loss_ll: Negative log-likelihood loss
                 - loss_kl: KL divergence loss
         """
+        inputs = self.standardize_inputs(inputs)
         image_id = inputs["image_id"]
         rasu_id = inputs["rasu_id"]
         hkl_in = inputs["hkl_in"]
         iobs = inputs["iobs"]
         sigiobs = inputs["sigiobs"]
 
+        # Scaling model
         scale_outputs = self.scale_model(
             inputs,
             image_id=image_id,
@@ -96,11 +120,13 @@ class VariationalMergingModel(torch.nn.Module):
         scale = scale_outputs["z"]
         scale_kl_div = scale_outputs["kl_div"]
 
+        # Structure factor
         q = self.surrogate_posterior
         p = self.prior.distribution()
         z = q.rsample((self.mc_samples,))  # Shape (mc_samples, rac_size)
         kl_div = compute_kl_divergence(q, p, samples=z)
 
+        # Reindexing for optimal likelihood
         ll = None
         ipred = None
         hkl = None
@@ -128,6 +154,7 @@ class VariationalMergingModel(torch.nn.Module):
                     idx[image_id].unsqueeze(-1), _hkl, hkl
                 )  # Shape (n_refln, 3)
 
+        # Output predictions and losses
         ipred_avg = torch.mean(ipred, dim=-1)  # Shape (n_refln,)
         return {
             "ipred_avg": ipred_avg,
