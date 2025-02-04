@@ -74,8 +74,16 @@ class VariationalMergingModel(torch.nn.Module):
         self, inputs: dict[str, torch.Tensor]
     ) -> dict[str, torch.Tensor]:
         metadata = inputs["metadata"]
-        iobs = inputs["iobs"]
-        sigiobs = inputs["sigiobs"]
+        iobs = (
+            inputs["iobs"].unsqueeze(-1)
+            if inputs["iobs"].dim() == 1
+            else inputs["iobs"]
+        )
+        sigiobs = (
+            inputs["sigiobs"].unsqueeze(-1)
+            if inputs["sigiobs"].dim() == 1
+            else inputs["sigiobs"]
+        )
         metadata = self.standardize_metadata(metadata)
         iobs = self.standardize_intensity(iobs)
         sigiobs = self.standardize_intensity.standardize(

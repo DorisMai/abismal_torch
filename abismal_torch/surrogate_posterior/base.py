@@ -74,11 +74,8 @@ class PosteriorBase(torch.nn.Module):
                 spacegroup=rasu.spacegroup,
             )
             idx = self.rac.rasu_ids.numpy() == i
-            print("For rasu_id", i, "out of size", self.rac.rac_size)
-            print(f"Number of reflections before only_observed: {np.sum(idx)}")
             if only_observed:
                 idx = idx & self.observed.numpy()
-            print(f"Number of reflections after only_observed: {np.sum(idx)}")
             out = ds[idx]
             out = out.set_index(["H", "K", "L"])
             if rasu.anomalous:

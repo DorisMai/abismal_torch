@@ -1,5 +1,6 @@
 from typing import Optional, Sequence
 
+import rs_distributions.modules as rsm
 import torch
 import torch.distributions as td
 import torch.nn as nn
@@ -17,11 +18,12 @@ class ImageScaler(nn.Module):
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
         activation: Optional[str | nn.Module] = "ReLU",
-        scaling_posterior: Optional[torch.distributions.Distribution] = td.Gamma,
+        scaling_posterior: Optional[rsm.DistributionModule] = rsm.Gamma,
         scaling_kl_weight: Optional[float] = 0.01,
         scaling_prior: Optional[torch.distributions.Distribution] = td.Laplace(
             0.0, 1.0
         ),
+        epsilon: Optional[float] = 1e-12,
         **kwargs
     ) -> None:
         """
@@ -58,6 +60,8 @@ class ImageScaler(nn.Module):
             scaling_prior (torch.distributions.Distribution, optional): instantiated distribution
                 for the scaling prior. Defaults to a Laplace distribution with mean 0.0 and
                 scale 1.0.
+            epsilon (float, optional): float, the epsilon value for numerical stability.
+                Defaults to 1e-12.
         """
         super().__init__(**kwargs)
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
@@ -88,18 +92,23 @@ class ImageScaler(nn.Module):
         self.scaling_posterior = scaling_posterior
         self.scaling_kl_weight = scaling_kl_weight
         self.scaling_prior = scaling_prior
+        self.epsilon = epsilon
 
     def _create_image(self, inputs: dict[str, torch.Tensor]) -> torch.Tensor:
         """
         Create the image tensor for the MLP after properly reshaping and concatenating inputs.
         """
         metadata = inputs["metadata"]
-        iobs = inputs["iobs"]
-        sigiobs = inputs["sigiobs"]
-        if len(iobs.shape) == 1:
-            iobs = iobs[:, None]
-        if len(sigiobs.shape) == 1:
-            sigiobs = sigiobs[:, None]
+        iobs = (
+            inputs["iobs"].unsqueeze(-1)
+            if inputs["iobs"].dim() == 1
+            else inputs["iobs"]
+        )
+        sigiobs = (
+            inputs["sigiobs"].unsqueeze(-1)
+            if inputs["sigiobs"].dim() == 1
+            else inputs["sigiobs"]
+        )
         image = torch.concat(
             (metadata, iobs, sigiobs), axis=-1
         )  # Shape (n_reflns, n_features + 2)
@@ -139,12 +148,15 @@ class ImageScaler(nn.Module):
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
-
-        # transform scaling_params to satisfy distribution constraints
-        for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
-            scaling_params[:, i] = torch.distributions.transform_to(constraint)(
-                scaling_params[:, i]
-            )
+        print("predicted scaling params before softplus:", scaling_params)
+        # softplus transform
+        scaling_params = torch.nn.functional.softplus(scaling_params) + self.epsilon
+        print("predicted scaling params after softplus:", scaling_params)
+        # # transform scaling_params to satisfy distribution constraints
+        # for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
+        #     scaling_params[:, i] = torch.distributions.transform_to(constraint)(
+        #         scaling_params[:, i]
+        #     )
 
         q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)

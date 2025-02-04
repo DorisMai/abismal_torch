@@ -1,12 +1,10 @@
 from typing import Optional
 
-import rs_distributions.distributions as rsd
 import rs_distributions.modules as rsm
 import torch
 
-from abismal_torch.distributions import PosteriorDistributionBase
 from abismal_torch.surrogate_posterior.base import PosteriorBase
-from abismal_torch.symmetry import ReciprocalASUCollection, ReciprocalASUGraph
+from abismal_torch.symmetry import ReciprocalASUCollection
 
 
 class FoldedNormalPosterior(PosteriorBase):

@@ -61,8 +61,7 @@ class WelfordStandardization(torch.nn.modules.batchnorm._NormBase):
         Extends PyTorch's _NormBase class for better compatibility with the framework.
 
         Args:
-            num_features (int): Number of features in the input data (C from an expected input
-                of size (N, C, *))
+            num_features (int): Number of features in the input data.
             epsilon (float, optional): Epsilon for numerical stability. Default: 1e-6
             center (bool, optional): If True, subtract the running mean from the input.
                 Default: True
