@@ -1395,11 +1395,7 @@ python-legacy = ["mkdocstrings-python-legacy (>=0.2.1)"]
 
 [[package]]
 name = "mkdocstrings-python"
-<<<<<<< HEAD
-version = "1.14.5"
-=======
 version = "1.15.0"
->>>>>>> c6b521d (fixed bug in loss averaging. minor edits on cli and io.)
 description = "A Python handler for mkdocstrings."
 optional = false
 python-versions = ">=3.9"
