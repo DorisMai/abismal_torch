@@ -160,7 +160,7 @@ def main():
         merging_model, arg_groups["Optimizer"].__dict__, kl_weight=args.kl_weight
     )
     callbacks = [
-        MTZSaver(out_dir=args.out_dir, every_n_steps=args.steps_per_epoch),
+        MTZSaver(out_dir=args.out_dir, save_every_epoch=True),
         ModelCheckpoint(dirpath=args.out_dir, filename="model_{epoch:02d}"),
     ]
     trainer = L.Trainer(

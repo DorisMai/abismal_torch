@@ -161,12 +161,11 @@ class VariationalMergingModel(torch.nn.Module):
                 hkl = torch.where(
                     idx[image_id].unsqueeze(-1), _hkl, hkl
                 )  # Shape (n_refln, 3)
-
         # Output predictions and losses
         ipred_avg = torch.mean(ipred, dim=-1)  # Shape (n_refln,)
         return {
             "ipred_avg": ipred_avg,
-            "loss_nll": -ll.mean(),
+            "loss_nll": -torch.nanmean(ll),
             "loss_kl": kl_div.mean(),
             "scale_kl_div": scale_kl_div.mean(),
             "hkl": hkl,

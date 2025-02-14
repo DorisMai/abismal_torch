@@ -9,7 +9,7 @@ class MTZSaver(L.Callback):
         self,
         out_dir: str,
         only_observed: Optional[bool] = True,
-        every_n_steps: Optional[int] = None,
+        save_every_epoch: Optional[bool] = True,
     ):
         """
         Callback to save model outputs as MTZ files.
@@ -17,22 +17,21 @@ class MTZSaver(L.Callback):
         Args:
             out_dir (str): Directory to save MTZ files
             only_observed (bool, optional): Whether to save only observed reflections.
-            every_n_steps (int, optional): Save merged MTZ file every n steps.
+            save_every_epoch (bool, optional): Whether to save MTZ file every epoch.
         """
         super().__init__()
         self.only_observed = only_observed
         self.out_dir = out_dir
         os.makedirs(out_dir, exist_ok=True)
-        self.every_n_steps = every_n_steps
+        self.save_every_epoch = save_every_epoch
 
     def on_train_end(self, trainer, pl_module) -> None:
         """Save final MTZ file at end of training"""
         self._save_mtz(trainer, pl_module)
 
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx) -> None:
-        if self.every_n_steps is None:
-            return
-        if trainer.global_step % self.every_n_steps == 0:
+    def on_train_epoch_end(self, trainer, pl_module) -> None:
+        """Save intermediate MTZ file at end of each epoch"""
+        if self.save_every_epoch:
             self._save_mtz(trainer, pl_module, is_intermediate=True)
 
     def _save_mtz(
@@ -55,7 +54,8 @@ class MTZSaver(L.Callback):
             if is_intermediate:
                 dataset.write_mtz(
                     os.path.join(
-                        self.out_dir, f"out_{rasu_id}_step{trainer.global_step:02d}.mtz"
+                        self.out_dir,
+                        f"out_{rasu_id}_epoch{trainer.current_epoch:02d}.mtz",
                     )
                 )
             else:

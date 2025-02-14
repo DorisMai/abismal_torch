@@ -148,10 +148,8 @@ class ImageScaler(nn.Module):
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
-        print("predicted scaling params before softplus:", scaling_params)
         # softplus transform
         scaling_params = torch.nn.functional.softplus(scaling_params) + self.epsilon
-        print("predicted scaling params after softplus:", scaling_params)
         # # transform scaling_params to satisfy distribution constraints
         # for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
         #     scaling_params[:, i] = torch.distributions.transform_to(constraint)(
