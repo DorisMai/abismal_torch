@@ -15,9 +15,9 @@ class ImageAverage(torch.nn.Module):
         """
         n_images = image_id.max() + 1
         n_features = x.shape[-1]
-        idx = torch.tile(image_id[:, None], (1, n_features))
-        xout = torch.zeros((n_images, n_features))
+        idx = torch.tile(image_id[:, None], (1, n_features)).to(dtype=torch.int64, device=x.device)
+        xout = torch.zeros((n_images, n_features)).type_as(x)
         xout.scatter_add_(dim=0, index=idx, src=x)
-        n_reflns_per_image = torch.bincount(image_id)
+        n_reflns_per_image = torch.bincount(image_id).to(dtype=torch.int64, device=x.device)
         xout /= n_reflns_per_image[:, None]
         return xout

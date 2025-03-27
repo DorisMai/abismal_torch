@@ -18,11 +18,10 @@ class ImageScaler(nn.Module):
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
         activation: Optional[str | nn.Module] = "ReLU",
-        scaling_posterior: Optional[rsm.DistributionModule] = rsm.Gamma,
+        scaling_posterior: Optional[rsm.DistributionModule] = td.Normal,
         scaling_kl_weight: Optional[float] = 0.01,
-        scaling_prior: Optional[torch.distributions.Distribution] = td.Laplace(
-            0.0, 1.0
-        ),
+        scaling_prior: Optional[str|torch.distributions.Distribution] = td.Laplace,
+        scaling_prior_params: Optional[tuple] = (0.0, 1.0),
         epsilon: Optional[float] = 1e-12,
         **kwargs
     ) -> None:
@@ -91,8 +90,17 @@ class ImageScaler(nn.Module):
             )
         self.scaling_posterior = scaling_posterior
         self.scaling_kl_weight = scaling_kl_weight
-        self.scaling_prior = scaling_prior
         self.epsilon = epsilon
+        self.register_buffer("scaling_prior_params",
+                             torch.tensor(scaling_prior_params, dtype=torch.float32))
+        self._scaling_prior = scaling_prior
+
+    def init_scaling_prior(self, reference_data: torch.Tensor) -> None:
+        self.scaling_prior_params.to(reference_data.device)
+        if isinstance(self._scaling_prior, str):
+            self.scaling_prior = getattr(td, self._scaling_prior)(*self.scaling_prior_params)
+        else:
+            self.scaling_prior = self._scaling_prior(*self.scaling_prior_params)
 
     def _create_image(self, inputs: dict[str, torch.Tensor]) -> torch.Tensor:
         """
@@ -149,15 +157,20 @@ class ImageScaler(nn.Module):
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
         # softplus transform
-        scaling_params = torch.nn.functional.softplus(scaling_params) + self.epsilon
+        #scaling_params = torch.nn.functional.softplus(scaling_params) + self.epsilon
+        loc,scale = scaling_params.unbind(dim=-1)
+        scale = torch.nn.functional.softplus(scale) + self.epsilon
+        q = self.scaling_posterior(loc, scale)
         # # transform scaling_params to satisfy distribution constraints
         # for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
         #     scaling_params[:, i] = torch.distributions.transform_to(constraint)(
         #         scaling_params[:, i]
         #     )
 
-        q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
+        #q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
+        if not hasattr(self, "scaling_prior"):
+            self.init_scaling_prior(scaling_params)
         p = self.scaling_prior.expand((len(scaling_params),))
         kl_div = compute_kl_divergence(q, p, samples=z)
         return {"z": torch.t(z), "kl_div": kl_div}  # Shape (n_reflns, mc_samples)

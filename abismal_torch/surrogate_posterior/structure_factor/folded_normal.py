@@ -56,8 +56,6 @@ class FoldedNormalPosterior(PosteriorBase):
                 torch.distributions.AffineTransform(epsilon, 1.0),
             ]
         )
-        loc_init = transform(loc)
-        scale_init = transform(scale)
-        loc = rsm.TransformedParameter(loc_init, transform)
-        scale = rsm.TransformedParameter(scale_init, transform)
+        #scale_init = transform(scale)
+        scale = rsm.TransformedParameter(scale, transform)
         return cls(rac, loc, scale, **kwargs)

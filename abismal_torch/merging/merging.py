@@ -63,10 +63,10 @@ class VariationalMergingModel(torch.nn.Module):
         """
         n_images = image_id.max() + 1
         _, mc_samples = source_value.shape
-        idx = torch.tile(image_id[:, None], (1, mc_samples))
-        _averaged = torch.zeros((n_images, mc_samples))
+        idx = torch.tile(image_id[:, None], (1, mc_samples)).to(dtype=torch.int64, device=source_value.device)
+        _averaged = torch.zeros((n_images, mc_samples)).type_as(source_value)
         _averaged.scatter_add_(dim=0, index=idx, src=source_value)
-        n_reflns_per_image = torch.bincount(image_id)
+        n_reflns_per_image = torch.bincount(image_id).to(dtype=torch.int64, device=source_value.device)
         averaged = _averaged.sum(dim=1) / n_reflns_per_image / mc_samples
         return averaged
 
