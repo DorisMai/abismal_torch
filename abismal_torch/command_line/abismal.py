@@ -128,9 +128,13 @@ def main():
         scaling_kl_weight=args.scale_kl_weight,
     )
 
-    from abismal_torch.likelihood import StudentTLikelihood
 
-    likelihood = StudentTLikelihood(args.studentt_dof)
+    if args.studentt_dof is None:
+        from abismal_torch.likelihood import NormalLikelihood
+        likelihood = NormalLikelihood(args.studentt_dof)
+    else:
+        from abismal_torch.likelihood import StudentTLikelihood,NormalLikelihood
+        likelihood = StudentTLikelihood(args.studentt_dof)
 
     from abismal_torch.prior import WilsonPrior
 
