@@ -131,7 +131,7 @@ def main():
 
     if args.studentt_dof is None:
         from abismal_torch.likelihood import NormalLikelihood
-        likelihood = NormalLikelihood(args.studentt_dof)
+        likelihood = NormalLikelihood()
     else:
         from abismal_torch.likelihood import StudentTLikelihood,NormalLikelihood
         likelihood = StudentTLikelihood(args.studentt_dof)
