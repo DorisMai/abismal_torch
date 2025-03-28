@@ -175,7 +175,7 @@ def main():
     trainer = L.Trainer(
         deterministic=True,
         accelerator=args.accelerator,
-        max_epochs=args.epochs,
+        min_steps=args.epochs * args.steps_per_epoch,
         default_root_dir=args.out_dir,
         callbacks=callbacks,
         log_every_n_steps=1,
