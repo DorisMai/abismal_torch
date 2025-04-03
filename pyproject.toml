@@ -1,25 +1,33 @@
 [tool.poetry]
-name = "test-abismal-torch"
-version = "0.1.0"
-description = ""
+name = "abismal-torch"
+version = "0.1.1a0"
+description = "Example template for developing custom Python package."
 authors = ["DorisMai <maihuanghao@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
-torch = "^2.4.1"
-numpy = "^2.1.1"
+python = "^3.10"
+torch = "^2.2.0"
+numpy = "^2.0.0"
 lightning = "^2.4.0"
-
+gemmi = ">=0.5.5,<=0.6.6"
+reciprocalspaceship = "^1.0.0"
+rs-distributions = "^0.0.3"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.8.0"
-isort = "^5.13.2"
+black = "^25.0.0"
+isort = "^6.0.0"
 pytest = "^8.3.3"
-sphinx = "^8.0.2"
-pytest-cov = "^5.0.0"
+pytest-cov = "^6.0.0"
 pre-commit = "^4.0.0"
+mkdocs = "^1.6.1"
+mkdocstrings-python = "^1.12.1"
+ipykernel = "^6.29.5"
+mkdocs-mermaid2-plugin = "^1.2.1"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+abismal = "abismal_torch.command_line.abismal:main"

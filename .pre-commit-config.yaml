@@ -15,4 +15,4 @@ repos:
     rev: 24.10.0
     hooks:
       - id: black
-        files: ^(test_abismal_torch|tests)/
+        files: ^(abismal_torch|tests)/

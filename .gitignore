@@ -1,5 +1,15 @@
 *__pycache__*
 *.swp
+.vscode
 .DS_Store
 .coverage
 coverage.xml
+.pytest_cache
+dist/
+site/
+*.ipynb
+lightning_logs/
+abismal_torch/simple_matmul.py
+tests/test_matmul.py
+tmp_outdir/
+tests/test_*.sh
