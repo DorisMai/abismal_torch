@@ -53,10 +53,10 @@ class PosteriorBase(torch.nn.Module):
         self.observed[observed_idx] = True
 
     def to_dataset(self, only_observed: Optional[bool] = True) -> Iterator[rs.DataSet]:
-        mean = self.distribution.mean.detach().numpy()
-        std = self.distribution.stddev.detach().numpy()
+        mean = self.distribution.mean.detach().cpu().numpy()
+        std = self.distribution.stddev.detach().cpu().numpy()
 
-        h, k, l = self.rac.H_rasu.numpy().T
+        h, k, l = self.rac.H_rasu.detach().cpu().numpy().T
         data = {
             "H": rs.DataSeries(h, dtype="H"),
             "K": rs.DataSeries(k, dtype="H"),
@@ -73,9 +73,9 @@ class PosteriorBase(torch.nn.Module):
                 cell=rasu.cell,
                 spacegroup=rasu.spacegroup,
             )
-            idx = self.rac.rasu_ids.numpy() == i
+            idx = self.rac.rasu_ids.detach().cpu().numpy() == i
             if only_observed:
-                idx = idx & self.observed.numpy()
+                idx = idx & self.observed.detach().cpu().numpy()
             out = ds[idx]
             out = out.set_index(["H", "K", "L"])
             if rasu.anomalous:

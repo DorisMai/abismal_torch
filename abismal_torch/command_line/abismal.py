@@ -3,7 +3,7 @@ from typing import Any, Optional
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
 from torch.optim import Adam
-
+import torch
 from abismal_torch.callbacks import MTZSaver
 
 
@@ -128,9 +128,13 @@ def main():
         scaling_kl_weight=args.scale_kl_weight,
     )
 
-    from abismal_torch.likelihood import StudentTLikelihood
 
-    likelihood = StudentTLikelihood(args.studentt_dof)
+    if args.studentt_dof is None:
+        from abismal_torch.likelihood import NormalLikelihood
+        likelihood = NormalLikelihood()
+    else:
+        from abismal_torch.likelihood import StudentTLikelihood,NormalLikelihood
+        likelihood = StudentTLikelihood(args.studentt_dof)
 
     from abismal_torch.prior import WilsonPrior
 
@@ -143,6 +147,11 @@ def main():
     surrogate_posterior = FoldedNormalPosterior.from_unconstrained_loc_and_scale(
         rac, loc_init, scale_init, epsilon=args.epsilon
     )
+    def check_grad_hook(grad):
+        if grad is not None:
+            print(f"Gradient stats: min={grad.min()}, max={grad.max()}, mean={grad.mean()}, any_nan={torch.isnan(grad).any()}")
+        return grad
+    #surrogate_posterior.distribution.loc.register_hook(check_grad_hook)
 
     from abismal_torch.merging import VariationalMergingModel
 
@@ -166,7 +175,7 @@ def main():
     trainer = L.Trainer(
         deterministic=True,
         accelerator=args.accelerator,
-        max_epochs=args.epochs,
+        min_steps=args.epochs * args.steps_per_epoch,
         default_root_dir=args.out_dir,
         callbacks=callbacks,
         log_every_n_steps=1,

@@ -63,3 +63,9 @@ class MTZDataModule(L.LightningDataModule):
         return DataLoader(
             self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers
         )
+
+#    def transfer_batch_to_device(self, batch, device, dataloader_idx):
+#        return {
+#            key: (value.to(device) if isinstance(value, torch.Tensor) else value)
+#            for key, value in batch.items()
+#        }
