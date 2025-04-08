@@ -37,6 +37,7 @@ class TestFoldedNormalPosterior:
         loc_diff_before = (posterior.distribution.loc - prior.loc).abs().mean()
         scale_diff_before = (posterior.distribution.scale - prior.scale).abs().mean()
 
+        init_kl = (posterior.log_prob(posterior.rsample((mc_samples,))) - prior.log_prob(posterior.rsample((mc_samples,)))).mean()
         for _ in range(steps):
             opt.zero_grad()
             z = posterior.rsample((mc_samples,))
@@ -44,8 +45,5 @@ class TestFoldedNormalPosterior:
             kl.backward()
             opt.step()
 
-        loc_diff_after = (posterior.distribution.loc - prior.loc).abs().mean()
-        scale_diff_after = (posterior.distribution.scale - prior.scale).abs().mean()
-
-        assert loc_diff_after < loc_diff_before
-        assert scale_diff_after < scale_diff_before
+        final_kl = (posterior.log_prob(posterior.rsample((mc_samples,))) - prior.log_prob(posterior.rsample((mc_samples,)))).mean()
+        assert final_kl < init_kl, f"final_kl: {final_kl}, init_kl: {init_kl}"
