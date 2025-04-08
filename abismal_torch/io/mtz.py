@@ -46,9 +46,9 @@ class MTZDataset(Dataset):
         self.metadata_keys = metadata_keys
 
         if self.cell is None:
-            self.cell = ds.cell
+            self.cell = ds.cell.parameters
         if self.spacegroup is None:
-            self.spacegroup = ds.spacegroup
+            self.spacegroup = ds.spacegroup.hm
         if self.wavelength is None:
             self.wavelength = 1.0
         if self.batch_key is None:
@@ -70,7 +70,7 @@ class MTZDataset(Dataset):
         ds["image_id"] = ds.groupby(self.batch_key).ngroup()
         ds.sort_values("image_id", inplace=True)
 
-        self.image_id = torch.tensor(ds.image_id.to_numpy("int64"))
+        self.image_id = torch.tensor(ds.image_id.to_numpy("int32"))
         self.rasu_id = torch.ones_like(self.image_id, dtype=torch.int32) * self.rasu_id
         self.hkl_in = torch.tensor(ds.get_hkls())
         self.resolution = torch.tensor(ds.dHKL.to_numpy())
@@ -80,20 +80,27 @@ class MTZDataset(Dataset):
         self.metadata = torch.tensor(ds[self.metadata_keys].to_numpy())
         self.Iobs = torch.tensor(ds[self.intensity_key].to_numpy())
         self.SigIobs = torch.tensor(ds[self.sigma_key].to_numpy())
+        # Create image_id to indices mapping for fast lookup
+        self.imageid_to_dataid = {}
+        for img_id in range(self.image_id.max() + 1):
+            self.imageid_to_dataid[img_id] = torch.where(self.image_id == img_id)[0]
+        
 
     def __len__(self):
-        return len(self.Iobs)
+        return self.image_id.max() + 1
 
     def __getitem__(self, idx):
+        indices = self.imageid_to_dataid[idx]
+        print(indices, flush=True)
         return {
-            "image_id": self.image_id[idx],
-            "rasu_id": self.rasu_id[idx],
-            "hkl_in": self.hkl_in[idx],
-            "resolution": self.resolution[idx],
-            "wavelength": self.wavelength[idx],
-            "metadata": self.metadata[idx],
-            "iobs": self.Iobs[idx],
-            "sigiobs": self.SigIobs[idx],
+            "image_id": self.image_id[indices],
+            "rasu_id": self.rasu_id[indices],
+            "hkl_in": self.hkl_in[indices],
+            "resolution": self.resolution[indices],
+            "wavelength": self.wavelength[indices],
+            "metadata": self.metadata[indices],
+            "iobs": self.Iobs[indices],
+            "sigiobs": self.SigIobs[indices],
         }
 
     def _get_first_key_of_type(self, ds, dtype):
