@@ -151,7 +151,7 @@ def main():
         if grad is not None:
             print(f"Gradient stats: min={grad.min()}, max={grad.max()}, mean={grad.mean()}, any_nan={torch.isnan(grad).any()}, all_finite={torch.isfinite(grad).all()}")
         return grad
-    #surrogate_posterior.distribution.loc.register_hook(check_grad_hook)
+    surrogate_posterior.distribution.loc.register_hook(check_grad_hook)
 
     from abismal_torch.merging import VariationalMergingModel
 
