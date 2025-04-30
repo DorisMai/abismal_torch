@@ -9,6 +9,12 @@ import wandb
 
 class PosteriorPlotter(L.Callback):
     def __init__(self, save_every_epoch: bool = True):
+        """
+        Callback to plot F vs SIGF from loc and scale of the posterior distribution.
+
+        Args:
+            save_every_epoch (bool, optional): Whether to save the plot every epoch.
+        """
         super().__init__()
         self.save_every_epoch = save_every_epoch
         self.plot_kwaargs = {"alpha": 0.5, "s": 10}
@@ -36,9 +42,9 @@ class PosteriorPlotter(L.Callback):
             loc = surrogate_posterior.distribution.loc.detach().cpu().numpy()
             scale = surrogate_posterior.distribution.scale.detach().cpu().numpy()
             fig, ax = plt.subplots()
-            ax.scatter(loc, scale, **self.plot_kwaargs)
+            ax.scatter(scale, loc, **self.plot_kwaargs)
             ax.set_box_aspect(1)
-            ax.set_xlabel("loc")
-            ax.set_ylabel("scale")
+            ax.set_xlabel("scale")
+            ax.set_ylabel("loc")
             plt.tight_layout()
             return fig
