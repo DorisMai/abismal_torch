@@ -1,10 +1,12 @@
 from typing import Any, Optional
 
 import lightning as L
-from lightning.pytorch.callbacks import ModelCheckpoint
-from torch.optim import Adam
 import torch
-from abismal_torch.callbacks import MTZSaver
+from lightning.pytorch.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
+from torch.optim import Adam
+
+from abismal_torch.callbacks import MTZSaver, PosteriorPlotter
 
 
 class AbismalLitModule(L.LightningModule):
@@ -128,12 +130,13 @@ def main():
         scaling_kl_weight=args.scale_kl_weight,
     )
 
-
     if args.studentt_dof is None:
         from abismal_torch.likelihood import NormalLikelihood
+
         likelihood = NormalLikelihood()
     else:
-        from abismal_torch.likelihood import StudentTLikelihood,NormalLikelihood
+        from abismal_torch.likelihood import NormalLikelihood, StudentTLikelihood
+
         likelihood = StudentTLikelihood(args.studentt_dof)
 
     from abismal_torch.prior import WilsonPrior
@@ -147,11 +150,6 @@ def main():
     surrogate_posterior = FoldedNormalPosterior.from_unconstrained_loc_and_scale(
         rac, loc_init, scale_init, epsilon=args.epsilon
     )
-    def check_grad_hook(grad):
-        if grad is not None:
-            print(f"Gradient stats: min={grad.min()}, max={grad.max()}, mean={grad.mean()}, any_nan={torch.isnan(grad).any()}, all_finite={torch.isfinite(grad).all()}")
-        return grad
-    surrogate_posterior.distribution.loc.register_hook(check_grad_hook)
 
     from abismal_torch.merging import VariationalMergingModel
 
@@ -171,14 +169,49 @@ def main():
     callbacks = [
         MTZSaver(out_dir=args.out_dir, save_every_epoch=True),
         ModelCheckpoint(dirpath=args.out_dir, filename="model_{epoch:02d}"),
+        PosteriorPlotter(save_every_epoch=True),
     ]
+
+    wandb_logger = WandbLogger(project="abismal_torch", save_dir=args.out_dir)
+    wandb_logger.watch(surrogate_posterior.distribution, log_freq=1)
+
+    def check_posterior_grad_hook(grad):
+        if grad is not None:
+            nan_mask = torch.isnan(grad)
+            inf_mask = torch.isinf(grad)
+            if nan_mask.any():
+                nan_indices = nan_mask.nonzero(as_tuple=False).tolist()
+                wandb_logger.log_text(
+                    key="posterior invalid grads",
+                    columns=["nan_indices"],
+                    data=[nan_indices],
+                )
+            if inf_mask.any():
+                inf_indices = inf_mask.nonzero(as_tuple=False).tolist()
+                wandb_logger.log_text(
+                    key="posterior invalid grads",
+                    columns=["inf_indices"],
+                    data=[inf_indices],
+                )
+
+            grad_stats = {
+                "posterior loc grad min": grad.min(),
+                "posterior loc grad max": grad.max(),
+                "posterior loc grad mean": grad.mean(),
+            }
+            trainer.logger.experiment.log(grad_stats)
+
+    surrogate_posterior.distribution.loc.register_hook(check_posterior_grad_hook)
+
     trainer = L.Trainer(
         deterministic=True,
         accelerator=args.accelerator,
         min_steps=args.epochs * args.steps_per_epoch,
+        max_steps=args.epochs * args.steps_per_epoch,
         default_root_dir=args.out_dir,
         callbacks=callbacks,
         log_every_n_steps=1,
+        logger=wandb_logger,
     )
     trainer.fit(model, data, ckpt_path=args.ckpt_path)
 
