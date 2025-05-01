@@ -172,5 +172,5 @@ class ImageScaler(nn.Module):
         if not hasattr(self, "scaling_prior"):
             self.init_scaling_prior(scaling_params)
         p = self.scaling_prior.expand((len(scaling_params),))
-        kl_div = compute_kl_divergence(q, p, samples=z)
+        kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
         return {"z": torch.t(z), "kl_div": kl_div}  # Shape (n_reflns, mc_samples)
