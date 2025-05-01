@@ -76,18 +76,18 @@ class TestMerging:
         }
 
     @pytest.mark.parametrize("steps", [100])
-    def test_merging(self, merging_model, myinputs, steps):
+    def test_merging(self, merging_model, myinputs, steps, data_params, rag):
         xout = merging_model(myinputs)
         assert xout["ipred_avg"].shape == (
             myinputs["iobs"].shape[0],
         ), f"xout[ipred_aveg] shape is {xout['ipred_avg'].shape}"
-        assert xout["loss_nll"].shape == (), f"xout[loss_nll] is {xout['loss_nll']}"
-        assert xout["loss_kl"].shape == (), f"xout[loss_kl] is {xout['loss_kl']}"
+        assert xout["loss_nll"].shape == torch.Size([data_params["n_image"]]), f"xout[loss_nll].shape is {xout['loss_nll'].shape}"
+        assert xout["loss_kl"].shape == torch.Size([rag.rac_size]), f"xout[loss_kl].shape is {xout['loss_kl'].shape}"
 
         opt = torch.optim.Adam(merging_model.parameters())
         for _ in range(steps):
             opt.zero_grad()
             xout = merging_model(myinputs)
-            loss = xout["loss_nll"] + xout["loss_kl"]
+            loss = xout["loss_nll"].mean() + xout["loss_kl"].mean()
             loss.backward()
             opt.step()
