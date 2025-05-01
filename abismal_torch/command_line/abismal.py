@@ -199,13 +199,13 @@ def main():
         merging_model, arg_groups["Optimizer"].__dict__, kl_weight=args.kl_weight
     )
     callbacks = [
-        MTZSaver(out_dir=args.out_dir, save_every_n_epoch=10),
+        MTZSaver(out_dir=args.out_dir, save_every_n_epoch=args.save_every_nepochs),
         ModelCheckpoint(dirpath=args.out_dir, filename="model_{epoch:02d}"),
-        # PosteriorPlotter(save_every_n_epoch=10),
+        # PosteriorPlotter(save_every_n_epoch=args.save_every_nepochs),
         GradientValidator(),
     ]
 
-    wandb_logger = WandbLogger(project="abismal_torch", save_dir=args.out_dir)
+    wandb_logger = WandbLogger(project="abismal_torch", save_dir=args.out_dir, name=args.log_run_name)
     wandb_logger.watch(surrogate_posterior.distribution, log_freq=1)
 
     def check_posterior_grad_hook(grad):

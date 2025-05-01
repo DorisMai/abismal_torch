@@ -61,7 +61,6 @@ class VariationalMergingModel(torch.nn.Module):
         Returns:
             averaged (torch.Tensor): A tensor of shape (n_images,).
         """
-        #group by unique image_id and average over images and mc samples
         unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
         n_images = unique_image_ids.size(0)
         _, mc_samples = source_value.shape
@@ -70,14 +69,6 @@ class VariationalMergingModel(torch.nn.Module):
         _averaged.scatter_add_(dim=0, index=idx, src=source_value)
         _averaged = _averaged.sum(dim=1) / counts / mc_samples
         return _averaged
-        # n_images = image_id.max() + 1
-        # _, mc_samples = source_value.shape
-        # idx = torch.tile(image_id[:, None], (1, mc_samples)).to(dtype=torch.int64, device=source_value.device)
-        # _averaged = torch.zeros((n_images, mc_samples)).type_as(source_value)
-        # _averaged.scatter_add_(dim=0, index=idx, src=source_value)
-        # n_reflns_per_image = torch.bincount(image_id).to(dtype=torch.int64, device=source_value.device)
-        # averaged = _averaged.sum(dim=1) / n_reflns_per_image / mc_samples
-        # return averaged
 
     def standardize_inputs(
         self, inputs: dict[str, torch.Tensor]
@@ -142,6 +133,10 @@ class VariationalMergingModel(torch.nn.Module):
         p = self.prior.distribution()
         z = q.rsample((self.mc_samples,))  # Shape (mc_samples, rac_size)
         kl_div = compute_kl_divergence(q, p, samples=z)
+        # for debug
+        if torch.any(z == 0):
+            from IPython import embed
+            embed(colors='linux')
 
         # Reindexing for optimal likelihood
         ll = None

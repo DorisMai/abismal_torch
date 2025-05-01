@@ -35,9 +35,9 @@ class PosteriorBase(torch.nn.Module):
         )
 
     def rsample(self, *args, **kwargs) -> torch.Tensor:
-        z = self.distribution.rsample(*args, **kwargs)
+        z = self.distribution.rsample(*args, **kwargs).clamp(min=self.epsilon)
         # 0 is not a valid z value for acentric reflections
-        z = torch.where(self.rac.centric, z, torch.clamp(z, min=self.epsilon))
+        # z = torch.where(self.rac.centric, z, torch.clamp(z, min=self.epsilon))
         return z
 
     def log_prob(self, z: torch.Tensor) -> torch.Tensor:
