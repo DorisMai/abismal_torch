@@ -14,6 +14,7 @@ class PosteriorBase(torch.nn.Module):
         self,
         rac: ReciprocalASUCollection,
         distribution: DistributionModule | PosteriorDistributionBase,
+        epsilon: Optional[float] = 1e-12,
         **kwargs,
     ):
         """
@@ -28,12 +29,16 @@ class PosteriorBase(torch.nn.Module):
         super().__init__(**kwargs)
         self.rac = rac
         self.distribution = distribution
+        self.epsilon = epsilon
         self.register_buffer(
             "observed", torch.zeros(self.rac.rac_size, dtype=torch.bool)
         )
 
     def rsample(self, *args, **kwargs) -> torch.Tensor:
-        return self.distribution.rsample(*args, **kwargs)
+        z = self.distribution.rsample(*args, **kwargs)
+        # 0 is not a valid z value for acentric reflections
+        z = torch.where(self.rac.centric, z, torch.clamp(z, min=self.epsilon))
+        return z
 
     def log_prob(self, z: torch.Tensor) -> torch.Tensor:
         return self.distribution.log_prob(z)
