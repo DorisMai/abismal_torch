@@ -4,6 +4,7 @@ import lightning as L
 import torch
 from lightning.pytorch.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
+from lightning.pytorch.utilities import grad_norm
 from torch.optim import Adam
 
 from abismal_torch.callbacks import MTZSaver, PosteriorPlotter
@@ -24,32 +25,46 @@ class AbismalLitModule(L.LightningModule):
         self.merging_model = merging_model
         self.kl_weight = kl_weight
         self.optimizer_kwargs = optimizer_kwargs
+        self.current_batch = None
+        self.current_outputs = None
 
     def training_step(self, batch, batch_idx):
+        self.current_batch = batch # for debug
         xout = self.merging_model(batch)
+        self.current_outputs = xout  # for debug
+
         self.merging_model.surrogate_posterior.update_observed(
             batch["rasu_id"], xout["hkl"]
         )
-        loss = xout["loss_nll"] + self.kl_weight * xout["loss_kl"]
+        loss = xout["loss_nll"].mean() + self.kl_weight * xout["loss_kl"].mean() + xout["scale_kl_div"].mean()
         self.log_dict(
             {
                 "loss": loss,
-                "NLL": xout["loss_nll"],
-                "KL": xout["loss_kl"],
-                "scale_KL": xout["scale_kl_div"],
+                "NLL": xout["loss_nll"].mean(),
+                "KL": xout["loss_kl"].mean(),
+                "scale_KL": xout["scale_kl_div"].mean(),
             }
         )
+        # for debug
+        nan_index = 18815
+        for i, z in enumerate(xout["z"][:, nan_index]):
+            self.log(f"z/{i}", z)
+
+        norms = grad_norm(self, norm_type=2)
+        for name, norm in norms.items():
+            self.log(f"grad_norm/{name}", norm)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
         xout = self.merging_model(batch)
-        val_loss = xout["loss_nll"] + self.kl_weight * xout["loss_kl"]
+        val_loss = xout["loss_nll"].mean() + self.kl_weight * xout["loss_kl"].mean() + xout["scale_kl_div"].mean()
         self.log_dict(
             {
                 "val_loss": val_loss,
-                "val_NLL": xout["loss_nll"],
-                "val_KL": xout["loss_kl"],
-                "val_scale_KL": xout["scale_kl_div"],
+                "val_NLL": xout["loss_nll"].mean(),
+                "val_KL": xout["loss_kl"].mean(),
+                "val_scale_KL": xout["scale_kl_div"].mean(),
             }
         )
         return val_loss
@@ -64,6 +79,23 @@ class AbismalLitModule(L.LightningModule):
         }
         opt = Adam(self.merging_model.parameters(), **optimzer_kwargs)
         return opt
+
+
+class GradientValidator(L.Callback):
+    def __init__(self):
+        super().__init__()
+        
+    def on_before_optimizer_step(self, trainer, pl_module, optimizer):
+        # Check all parameters for invalid gradients
+        for name, param in pl_module.named_parameters():
+            if param.grad is not None:
+                if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
+                    print(f"Invalid gradients found in parameter: {name}")
+                    print(f"Gradient stats - min: {param.grad.min()}, max: {param.grad.max()}, mean: {param.grad.mean()}")
+                    print("Dropping into IPython for debugging...")
+                    from IPython import embed
+                    embed(colors='linux')
+                    return
 
 
 def _group_args(parser):
@@ -167,9 +199,10 @@ def main():
         merging_model, arg_groups["Optimizer"].__dict__, kl_weight=args.kl_weight
     )
     callbacks = [
-        MTZSaver(out_dir=args.out_dir, save_every_epoch=True),
+        MTZSaver(out_dir=args.out_dir, save_every_n_epoch=10),
         ModelCheckpoint(dirpath=args.out_dir, filename="model_{epoch:02d}"),
-        PosteriorPlotter(save_every_epoch=True),
+        # PosteriorPlotter(save_every_n_epoch=10),
+        GradientValidator(),
     ]
 
     wandb_logger = WandbLogger(project="abismal_torch", save_dir=args.out_dir)
@@ -200,8 +233,16 @@ def main():
                 "posterior loc grad mean": grad.mean(),
             }
             trainer.logger.experiment.log(grad_stats)
+            
+            invalid_indices = 18815
+            trainer.logger.experiment.log(
+                {
+                    f"posterior loc grad {invalid_indices}": grad[invalid_indices],
+                }
+            )
 
     surrogate_posterior.distribution.loc.register_hook(check_posterior_grad_hook)
+
 
     trainer = L.Trainer(
         deterministic=True,

@@ -41,4 +41,7 @@ def compute_kl_divergence(
         return q.kl_divergence(p, samples=samples)
     except AttributeError or NotImplementedError:
         kl_div = q.log_prob(samples) - p.log_prob(samples)
+        if not torch.isfinite(kl_div).all():
+            from IPython import embed
+            embed(colors='linux')
         return kl_div.mean(dim=0)
