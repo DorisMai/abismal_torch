@@ -161,13 +161,6 @@ class ImageScaler(nn.Module):
         loc,scale = scaling_params.unbind(dim=-1)
         scale = torch.nn.functional.softplus(scale) + self.epsilon
         q = self.scaling_posterior(loc, scale)
-        # # transform scaling_params to satisfy distribution constraints
-        # for i, constraint in enumerate(self.scaling_posterior.arg_constraints.values()):
-        #     scaling_params[:, i] = torch.distributions.transform_to(constraint)(
-        #         scaling_params[:, i]
-        #     )
-
-        #q = self.scaling_posterior(*scaling_params.unbind(dim=-1))
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
         if not hasattr(self, "scaling_prior"):
             self.init_scaling_prior(scaling_params)
