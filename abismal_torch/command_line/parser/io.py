@@ -46,6 +46,23 @@ args_and_kwargs = (
             "type": str,
         },
     ),
+    (
+        ("--save-every-nepochs",),
+        {
+            "help": "Save a checkpoint every n epochs.",
+            "default": 1,
+            "type": int,
+        },
+    ),
+    (
+        ("--log-run-name",),
+        {
+            "help": "Name of the run for logging.",
+            "default": None,
+            "type": str,
+        },
+    ),
+    
     # (
     #     ("--separate",),
     #     {

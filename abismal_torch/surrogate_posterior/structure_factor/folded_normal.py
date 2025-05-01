@@ -13,6 +13,7 @@ class FoldedNormalPosterior(PosteriorBase):
         rac: ReciprocalASUCollection,
         loc: torch.Tensor,
         scale: torch.Tensor,
+        epsilon: Optional[float] = 1e-12,
         **kwargs
     ):
         """
@@ -29,7 +30,7 @@ class FoldedNormalPosterior(PosteriorBase):
             distribution (rs_distributions.modules.DistributionModule): Learnable torch distribution object.
         """
         distribution = rsm.FoldedNormal(loc, scale)
-        super().__init__(rac, distribution, **kwargs)
+        super().__init__(rac, distribution, epsilon, **kwargs)
 
     @classmethod
     def from_unconstrained_loc_and_scale(
@@ -58,4 +59,4 @@ class FoldedNormalPosterior(PosteriorBase):
         )
         #scale_init = transform(scale)
         scale = rsm.TransformedParameter(scale, transform)
-        return cls(rac, loc, scale, **kwargs)
+        return cls(rac, loc, scale, epsilon, **kwargs)

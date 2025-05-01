@@ -13,6 +13,7 @@ lightning = "^2.4.0"
 gemmi = ">=0.5.5,<=0.6.6"
 reciprocalspaceship = "^1.0.0"
 rs-distributions = "^0.0.3"
+matplotlib = "^3.10.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.0.0"
@@ -24,6 +25,7 @@ mkdocs = "^1.6.1"
 mkdocstrings-python = "^1.12.1"
 ipykernel = "^6.29.5"
 mkdocs-mermaid2-plugin = "^1.2.1"
+wandb = "^0.19.10"
 
 [build-system]
 requires = ["poetry-core"]

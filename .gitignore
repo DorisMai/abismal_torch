@@ -9,6 +9,7 @@ dist/
 site/
 *.ipynb
 lightning_logs/
+wandb/
 abismal_torch/simple_matmul.py
 tests/test_matmul.py
 tmp_outdir/
