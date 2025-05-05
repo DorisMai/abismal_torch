@@ -39,6 +39,19 @@ class PosteriorBase(torch.nn.Module):
         # 0 is not a valid z value for acentric reflections
         # z = torch.where(self.rac.centric, z, torch.clamp(z, min=self.epsilon))
         return z
+    
+    @property
+    def mean(self) -> torch.Tensor:
+        # epsilon added due to rsample shifted by epsilon
+        return self.distribution.mean + self.epsilon
+    
+    @property
+    def stddev(self) -> torch.Tensor:
+        return self.distribution.stddev
+    
+    @property
+    def variance(self) -> torch.Tensor:
+        return self.distribution.variance
 
     def log_prob(self, z: torch.Tensor) -> torch.Tensor:
         return self.distribution.log_prob(z)
