@@ -73,8 +73,8 @@ class MTZDataset(Dataset):
         ds["image_id"] = ds.groupby(self.batch_key).ngroup()
         ds.sort_values("image_id", inplace=True)
 
-        self.image_id = torch.tensor(ds.image_id.to_numpy("int32"))
-        self.rasu_id = torch.ones_like(self.image_id, dtype=torch.int32) * self.rasu_id
+        self.image_id = torch.tensor(ds.image_id.to_numpy("int64"))
+        self.rasu_id = torch.ones_like(self.image_id, dtype=torch.int64) * self.rasu_id
         self.hkl_in = torch.tensor(ds.get_hkls())
         self.resolution = torch.tensor(ds.dHKL.to_numpy())
         self.wavelength = (

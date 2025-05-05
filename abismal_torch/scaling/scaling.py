@@ -144,14 +144,12 @@ class ImageScaler(nn.Module):
         image = self._create_image(inputs)  # Shape (n_reflns, n_features + 2)
         image_embeddings = self.image_linear_in(image)  # Shape (n_reflns, mlp_width)
         image_embeddings = self.mlp(image_embeddings)  # Shape (n_reflns, mlp_width)
-        image_embeddings = self.pool(
+        image_embeddings, image_idx, _ = self.pool(
             image_embeddings, image_id
         )  # Shape (n_images, mlp_width)
 
         scale_embeddings = self.scale_linear_in(metadata)  # Shape (n_reflns, mlp_width)
-        scale_embeddings = (
-            scale_embeddings + image_embeddings[image_id]
-        )  # Shape (n_reflns, mlp_width)
+        scale_embeddings = scale_embeddings + image_embeddings[image_idx]
         scale_embeddings = self.scale_mlp(
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)

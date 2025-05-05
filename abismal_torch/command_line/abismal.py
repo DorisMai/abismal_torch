@@ -226,20 +226,12 @@ def main():
                     columns=["inf_indices"],
                     data=[inf_indices],
                 )
-
             grad_stats = {
                 "posterior loc grad min": grad.min(),
                 "posterior loc grad max": grad.max(),
                 "posterior loc grad mean": grad.mean(),
             }
             trainer.logger.experiment.log(grad_stats)
-            
-            invalid_indices = 18815
-            trainer.logger.experiment.log(
-                {
-                    f"posterior loc grad {invalid_indices}": grad[invalid_indices],
-                }
-            )
 
     surrogate_posterior.distribution.loc.register_hook(check_posterior_grad_hook)
 

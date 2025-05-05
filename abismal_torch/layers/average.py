@@ -2,22 +2,26 @@ import torch
 
 
 class ImageAverage(torch.nn.Module):
-    def forward(self, x: torch.Tensor, image_id: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, image_id: torch.Tensor) -> torch.Tensor:
         """
-        Average x features by image_id.
+        Average x along images and across mc samples.
 
         Args:
-            x (torch.Tensor): A float tensor of shape (n_refln, n_feature).
-            image_id (torch.Tensor): An int tensor of shape (n_refln).
+            x (torch.Tensor): Source value tensor of shape (n_reflns, n_dim).
+            image_id (torch.Tensor): A tensor of shape (n_reflns,) that contains the
+                image index for each reflection.
 
         Returns:
-            xout (torch.Tensor): A float tensor of shape (n_images, n_feature).
+            averaged (torch.Tensor): A tensor of shape (n_images, n_dim).
+            counts (torch.Tensor): A tensor of shape (n_images,) that contains the
+                number of reflections in each image.
         """
-        n_images = image_id.max() + 1
-        n_features = x.shape[-1]
-        idx = torch.tile(image_id[:, None], (1, n_features)).to(dtype=torch.int64, device=x.device)
-        xout = torch.zeros((n_images, n_features)).type_as(x)
-        xout.scatter_add_(dim=0, index=idx, src=x)
-        n_reflns_per_image = torch.bincount(image_id).to(dtype=torch.int64, device=x.device)
-        xout /= n_reflns_per_image[:, None]
-        return xout
+        unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
+        n_images = unique_image_ids.size(0)
+        _, n_dim = x.shape
+        _averaged = x.new_zeros((n_images, n_dim))
+        idx = unique_indices[:, None].expand(-1, n_dim)
+        _averaged.scatter_add_(dim=0, index=idx, src=x)
+        _averaged /= counts[:, None]
+        return _averaged, unique_indices, counts

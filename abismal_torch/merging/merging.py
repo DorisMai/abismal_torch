@@ -4,6 +4,7 @@ import torch
 
 from abismal_torch.distributions import compute_kl_divergence
 from abismal_torch.layers import LazyWelfordStandardization as Standardization
+from abismal_torch.layers.average import ImageAverage
 from abismal_torch.prior.base import PriorBase
 from abismal_torch.surrogate_posterior.base import PosteriorBase
 from abismal_torch.symmetry import Op
@@ -46,29 +47,7 @@ class VariationalMergingModel(torch.nn.Module):
         self.reindexing_ops = [Op(op) for op in reindexing_ops]
         self.standardize_intensity = Standardization(center=False)
         self.standardize_metadata = Standardization(center=True)
-
-    def average_by_images(
-        self, source_value: torch.Tensor, image_id: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        Average source_value along images and across mc samples.
-
-        Args:
-            source_value (torch.Tensor): A tensor of shape (n_reflns, n_samples).
-            image_id (torch.Tensor): A tensor of shape (n_reflns,) that contains the
-                image index for each reflection.
-
-        Returns:
-            averaged (torch.Tensor): A tensor of shape (n_images,).
-        """
-        unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
-        n_images = unique_image_ids.size(0)
-        _, mc_samples = source_value.shape
-        _averaged = torch.zeros((n_images, mc_samples)).type_as(source_value)
-        idx = torch.tile(unique_indices[:, None], (1, mc_samples)).to(dtype=torch.int64, device=source_value.device)
-        _averaged.scatter_add_(dim=0, index=idx, src=source_value)
-        _averaged = _averaged.sum(dim=1) / counts / mc_samples
-        return _averaged
+        self.pool = ImageAverage()
 
     def standardize_inputs(
         self, inputs: dict[str, torch.Tensor]
@@ -142,6 +121,7 @@ class VariationalMergingModel(torch.nn.Module):
         ll = None
         ipred = None
         hkl = None
+        reflns_per_image = None
         for op in self.reindexing_ops:
             _hkl = op(hkl_in)
             _ipred = self.surrogate_posterior.rac.gather(
@@ -150,7 +130,8 @@ class VariationalMergingModel(torch.nn.Module):
             _ipred = torch.square(_ipred) * scale
 
             _ll = self.likelihood(_ipred, iobs, sigiobs)
-            _ll = self.average_by_images(_ll, image_id)  # Shape (n_images,)
+            _ll, _, reflns_per_image = self.pool(_ll, image_id)  # Shape (n_images, mc_samples), _, (n_images,)
+            _ll = _ll.mean(dim=1) # Shape (n_images,)
 
             if ll is None:
                 ipred = _ipred
@@ -165,8 +146,9 @@ class VariationalMergingModel(torch.nn.Module):
                 hkl = torch.where(
                     idx[image_id].unsqueeze(-1), _hkl, hkl
                 )  # Shape (n_refln, 3)
-        # Output predictions and losses
-        ipred_avg = torch.mean(ipred, dim=-1)  # Shape (n_refln,)
+
+        # Reweight likelihood by number of reflections in each image
+        ll = ll * reflns_per_image / reflns_per_image.sum()
         
         # if ipred or ll any is not finite, drop into IPython
         if not torch.all(torch.isfinite(ipred)) or not torch.all(torch.isfinite(ll)):
@@ -174,10 +156,10 @@ class VariationalMergingModel(torch.nn.Module):
             embed(colors='linux')
 
         return {
-            "ipred_avg": ipred_avg,
             "loss_nll": -ll, #shape (n_images,)
             "loss_kl": kl_div, #shape (rac_size,)
             "scale_kl_div": scale_kl_div, #shape (n_reflns,)
+            "ipred_avg": torch.mean(ipred, dim=-1), #shape (n_reflns,)
             "hkl": hkl, #shape (n_reflns, 3)
             "z": z, #shape (mc_samples, rac_size)
             "scale": scale, #shape (mc_samples, n_reflns)
