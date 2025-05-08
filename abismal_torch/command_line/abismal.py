@@ -243,7 +243,8 @@ def main():
         max_steps=args.epochs * args.steps_per_epoch,
         default_root_dir=args.out_dir,
         callbacks=callbacks,
-        log_every_n_steps=1,
+        log_every_n_steps=10,
+        check_val_every_n_epoch=10,
         logger=wandb_logger,
     )
     trainer.fit(model, data, ckpt_path=args.ckpt_path)

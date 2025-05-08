@@ -27,7 +27,8 @@ def image_id(data_params):
 
 def test_imageaverage(data_params, data, image_id):
     average = ImageAverage()
-    out, _, _ = average(data, image_id)
+    unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
+    out = average(data, unique_indices, counts)
     assert out.shape == (data_params["n_image"], data_params["n_feature"])
 
     alternative_out = torch.full(
@@ -180,7 +181,8 @@ def test_image_scaler(
     custom_scaling_model = ImageScaler(
         share_weights=share_weights, use_glu=use_glu, **custom_scaling_model_params
     )
-    _ = custom_scaling_model(inputs, image_id, mc_samples)
+    unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
+    _ = custom_scaling_model(inputs, unique_indices, counts, mc_samples)
 
     if share_weights:
         # image_linear_in, scale_linear_in, linear_out, pool, mlp

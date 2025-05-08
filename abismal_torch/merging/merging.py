@@ -92,16 +92,19 @@ class VariationalMergingModel(torch.nn.Module):
                 - loss_kl: KL divergence loss
         """
         inputs = self.standardize_inputs(inputs)
-        image_id = inputs["image_id"]
         rasu_id = inputs["rasu_id"]
         hkl_in = inputs["hkl_in"]
         iobs = inputs["iobs"]
         sigiobs = inputs["sigiobs"]
+        _, image_ids_in_this_batch, n_reflns_per_image = torch.unique(inputs["image_id"], 
+                                                                      return_inverse=True, 
+                                                                      return_counts=True)
 
         # Scaling model
         scale_outputs = self.scale_model(
             inputs,
-            image_id=image_id,
+            image_ids_in_this_batch=image_ids_in_this_batch,
+            n_reflns_per_image=n_reflns_per_image,
             mc_samples=self.mc_samples,
         )
         scale = scale_outputs["z"]
@@ -130,7 +133,7 @@ class VariationalMergingModel(torch.nn.Module):
             _ipred = torch.square(_ipred) * scale
 
             _ll = self.likelihood(_ipred, iobs, sigiobs)
-            _ll, _, reflns_per_image = self.pool(_ll, image_id)  # Shape (n_images, mc_samples), _, (n_images,)
+            _ll = self.pool(_ll, image_ids_in_this_batch, n_reflns_per_image) # Shape (n_images, mc_samples)
             _ll = _ll.mean(dim=1) # Shape (n_images,)
 
             if ll is None:
@@ -139,16 +142,16 @@ class VariationalMergingModel(torch.nn.Module):
                 hkl = _hkl
             else:
                 idx = _ll > ll
-                ipred = torch.where(
-                    idx[image_id].unsqueeze(-1), _ipred, ipred
-                )  # Shape (n_refln, mc_samples)
                 ll = torch.where(idx, _ll, ll)  # Shape (n_images,)
+                ipred = torch.where(
+                    idx[image_ids_in_this_batch], _ipred, ipred
+                ) # Shape (n_refln, mc_samples)
                 hkl = torch.where(
-                    idx[image_id].unsqueeze(-1), _hkl, hkl
-                )  # Shape (n_refln, 3)
+                    idx[image_ids_in_this_batch], _hkl, hkl
+                ) # Shape (n_refln, 3)
 
         # Reweight likelihood by number of reflections in each image
-        ll = ll * reflns_per_image / reflns_per_image.sum()
+        ll = ll * n_reflns_per_image / n_reflns_per_image.sum()
         
         # if ipred or ll any is not finite, drop into IPython
         if not torch.all(torch.isfinite(ipred)) or not torch.all(torch.isfinite(ll)):

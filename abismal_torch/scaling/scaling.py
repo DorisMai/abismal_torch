@@ -96,7 +96,6 @@ class ImageScaler(nn.Module):
         self._scaling_prior = scaling_prior
 
     def init_scaling_prior(self, reference_data: torch.Tensor) -> None:
-        self.scaling_prior_params.to(reference_data.device)
         if isinstance(self._scaling_prior, str):
             self.scaling_prior = getattr(td, self._scaling_prior)(*self.scaling_prior_params)
         else:
@@ -125,38 +124,44 @@ class ImageScaler(nn.Module):
     def forward(
         self,
         inputs: Sequence[torch.Tensor],
-        image_id: torch.Tensor,
+        image_ids_in_this_batch: torch.Tensor,
+        n_reflns_per_image: torch.Tensor,
         mc_samples: Optional[int] = 32,
     ) -> torch.Tensor:
         """
         Args:
             inputs (Sequence[torch.Tensor]): a tuple of (asu_id, ..., metadata, iobs, sigiobs)
                 tensors of shape (n_reflns, n_features).
-            image_id (torch.Tensor): shape (n_reflns), the image id for each reflection.
+            image_ids_in_this_batch (torch.Tensor): shape (n_reflns), the image id for each 
+                reflection.
+            n_reflns_per_image (torch.Tensor): shape (n_images), the number of reflections in each
+                image.
             mc_samples (int, optional): int, number of samples to draw from the scaling posterior.
                 Defaults to 32.
 
         Returns:
             z (torch.Tensor): shape (mc_samples, n_reflns), samples from the learned scaling
                 posterior.
+            kl_div (torch.Tensor): shape (n_reflns,), the weightedKL divergence between the scaling
+                posterior and the scaling prior.
         """
         metadata = inputs["metadata"]
         image = self._create_image(inputs)  # Shape (n_reflns, n_features + 2)
         image_embeddings = self.image_linear_in(image)  # Shape (n_reflns, mlp_width)
         image_embeddings = self.mlp(image_embeddings)  # Shape (n_reflns, mlp_width)
-        image_embeddings, image_idx, _ = self.pool(
-            image_embeddings, image_id
+        image_embeddings = self.pool(
+            image_embeddings, image_ids_in_this_batch, n_reflns_per_image
         )  # Shape (n_images, mlp_width)
 
         scale_embeddings = self.scale_linear_in(metadata)  # Shape (n_reflns, mlp_width)
-        scale_embeddings = scale_embeddings + image_embeddings[image_idx]
+        scale_embeddings = scale_embeddings + image_embeddings[image_ids_in_this_batch]
         scale_embeddings = self.scale_mlp(
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
+
         # softplus transform
-        #scaling_params = torch.nn.functional.softplus(scaling_params) + self.epsilon
-        loc,scale = scaling_params.unbind(dim=-1)
+        loc, scale = scaling_params.unbind(dim=-1)
         scale = torch.nn.functional.softplus(scale) + self.epsilon
         q = self.scaling_posterior(loc, scale)
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
@@ -164,4 +169,5 @@ class ImageScaler(nn.Module):
             self.init_scaling_prior(scaling_params)
         p = self.scaling_prior.expand((len(scaling_params),))
         kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
-        return {"z": torch.t(z), "kl_div": kl_div}  # Shape (n_reflns, mc_samples)
+        return {"z": torch.t(z),   # Shape (n_reflns, mc_samples)
+                "kl_div": kl_div}  # Shape (n_reflns,)
