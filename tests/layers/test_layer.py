@@ -27,7 +27,7 @@ def image_id(data_params):
 
 def test_imageaverage(data_params, data, image_id):
     average = ImageAverage()
-    out = average(data, image_id)
+    out, _, _ = average(data, image_id)
     assert out.shape == (data_params["n_image"], data_params["n_feature"])
 
     alternative_out = torch.full(
