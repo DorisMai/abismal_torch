@@ -33,3 +33,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 abismal = "abismal_torch.command_line.abismal:main"
+abismal-yaml = "abismal_torch.abismal_yaml:main"

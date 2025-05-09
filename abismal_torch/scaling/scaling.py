@@ -18,9 +18,13 @@ class ImageScaler(nn.Module):
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
         activation: Optional[str | nn.Module] = "ReLU",
-        scaling_posterior: Optional[rsm.DistributionModule] = td.Normal,
+        scaling_posterior: Optional[
+            str | type[torch.distributions.Distribution]
+        ] = td.Normal,
         scaling_kl_weight: Optional[float] = 0.01,
-        scaling_prior: Optional[str|torch.distributions.Distribution] = td.Laplace,
+        scaling_prior: Optional[
+            str | type[torch.distributions.Distribution]
+        ] = td.Laplace,
         scaling_prior_params: Optional[tuple] = (0.0, 1.0),
         epsilon: Optional[float] = 1e-12,
         **kwargs
@@ -65,7 +69,11 @@ class ImageScaler(nn.Module):
         super().__init__(**kwargs)
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
         self.scale_linear_in = CustomInitLazyLinear(mlp_width)
-        num_distribution_args = len(scaling_posterior.arg_constraints)
+        if isinstance(scaling_posterior, str):
+            self.scaling_posterior = getattr(td, scaling_posterior)
+        else:
+            self.scaling_posterior = scaling_posterior
+        num_distribution_args = len(self.scaling_posterior.arg_constraints)
         self.linear_out = CustomInitLazyLinear(num_distribution_args)
         self.pool = ImageAverage()
         self.share_weights = share_weights
@@ -88,16 +96,19 @@ class ImageScaler(nn.Module):
                 use_glu=use_glu,
                 activation=activation,
             )
-        self.scaling_posterior = scaling_posterior
         self.scaling_kl_weight = scaling_kl_weight
         self.epsilon = epsilon
-        self.register_buffer("scaling_prior_params",
-                             torch.tensor(scaling_prior_params, dtype=torch.float32))
+        self.register_buffer(
+            "scaling_prior_params",
+            torch.tensor(scaling_prior_params, dtype=torch.float32),
+        )
         self._scaling_prior = scaling_prior
 
     def init_scaling_prior(self, reference_data: torch.Tensor) -> None:
         if isinstance(self._scaling_prior, str):
-            self.scaling_prior = getattr(td, self._scaling_prior)(*self.scaling_prior_params)
+            self.scaling_prior = getattr(td, self._scaling_prior)(
+                *self.scaling_prior_params
+            )
         else:
             self.scaling_prior = self._scaling_prior(*self.scaling_prior_params)
 
@@ -132,7 +143,7 @@ class ImageScaler(nn.Module):
         Args:
             inputs (Sequence[torch.Tensor]): a tuple of (asu_id, ..., metadata, iobs, sigiobs)
                 tensors of shape (n_reflns, n_features).
-            image_ids_in_this_batch (torch.Tensor): shape (n_reflns), the image id for each 
+            image_ids_in_this_batch (torch.Tensor): shape (n_reflns), the image id for each
                 reflection.
             n_reflns_per_image (torch.Tensor): shape (n_images), the number of reflections in each
                 image.
@@ -169,5 +180,7 @@ class ImageScaler(nn.Module):
             self.init_scaling_prior(scaling_params)
         p = self.scaling_prior.expand((len(scaling_params),))
         kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
-        return {"z": torch.t(z),   # Shape (n_reflns, mc_samples)
-                "kl_div": kl_div}  # Shape (n_reflns,)
+        return {
+            "z": torch.t(z),  # Shape (n_reflns, mc_samples)
+            "kl_div": kl_div,
+        }  # Shape (n_reflns,)
