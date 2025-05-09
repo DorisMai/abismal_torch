@@ -44,6 +44,8 @@ class MTZDataModule(L.LightningDataModule):
         anomalous: Optional[bool] = False,
         cell: Optional[List[float]] = None,
         spacegroup: Optional[str] = None,
+        pin_memory: Optional[bool] = False,
+        persistent_workers: Optional[bool] = False,
     ):
         """
         Load MTZ files using LightningDataModule.
@@ -91,10 +93,12 @@ class MTZDataModule(L.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.test_fraction = test_fraction
+        self.pin_memory = pin_memory
+        self.persistent_workers = persistent_workers
 
     def setup(self, stage: Optional[str] = None):
         # Random split based on images, not reflections
-        total_len = self.num_asus
+        total_len = len(self.dataset)
         val_size = int(total_len * self.test_fraction)
         train_size = total_len - val_size
         self.train_dataset, self.val_dataset = random_split(
@@ -111,6 +115,8 @@ class MTZDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             collate_fn=collate_fn,
+            pin_memory=self.pin_memory,
+            persistent_workers=self.persistent_workers,
         )
 
     def val_dataloader(self):
@@ -119,6 +125,8 @@ class MTZDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             collate_fn=collate_fn,
+            pin_memory=self.pin_memory,
+            persistent_workers=self.persistent_workers,
         )
 
 

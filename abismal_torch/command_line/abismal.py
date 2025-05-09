@@ -145,6 +145,8 @@ def main():
         dmin=args.dmin,
         wavelength=args.wavelength,
         rasu_ids=args.rasu_ids,
+        persistent_workers=args.persistent_workers,
+        pin_memory=args.pin_memory,
     )
 
     # ========== construct RASU ==========#
