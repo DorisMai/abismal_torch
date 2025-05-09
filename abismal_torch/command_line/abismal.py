@@ -3,8 +3,8 @@ from typing import Any, Optional
 import lightning as L
 import torch
 from lightning.pytorch.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import WandbLogger
 from lightning.pytorch.utilities import grad_norm
+from pytorch_lightning.loggers import WandbLogger
 from torch.optim import Adam
 
 from abismal_torch.callbacks import MTZSaver, PosteriorPlotter
@@ -29,14 +29,18 @@ class AbismalLitModule(L.LightningModule):
         self.current_outputs = None
 
     def training_step(self, batch, batch_idx):
-        self.current_batch = batch # for debug
+        self.current_batch = batch  # for debug
         xout = self.merging_model(batch)
         self.current_outputs = xout  # for debug
 
         self.merging_model.surrogate_posterior.update_observed(
             batch["rasu_id"], xout["hkl"]
         )
-        loss = xout["loss_nll"].mean() + self.kl_weight * xout["loss_kl"].mean() + xout["scale_kl_div"].mean()
+        loss = (
+            xout["loss_nll"].mean()
+            + self.kl_weight * xout["loss_kl"].mean()
+            + xout["scale_kl_div"].mean()
+        )
         self.log_dict(
             {
                 "loss": loss,
@@ -58,7 +62,11 @@ class AbismalLitModule(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         xout = self.merging_model(batch)
-        val_loss = xout["loss_nll"].mean() + self.kl_weight * xout["loss_kl"].mean() + xout["scale_kl_div"].mean()
+        val_loss = (
+            xout["loss_nll"].mean()
+            + self.kl_weight * xout["loss_kl"].mean()
+            + xout["scale_kl_div"].mean()
+        )
         self.log_dict(
             {
                 "val_loss": val_loss,
@@ -84,17 +92,20 @@ class AbismalLitModule(L.LightningModule):
 class GradientValidator(L.Callback):
     def __init__(self):
         super().__init__()
-        
+
     def on_before_optimizer_step(self, trainer, pl_module, optimizer):
         # Check all parameters for invalid gradients
         for name, param in pl_module.named_parameters():
             if param.grad is not None:
                 if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
                     print(f"Invalid gradients found in parameter: {name}")
-                    print(f"Gradient stats - min: {param.grad.min()}, max: {param.grad.max()}, mean: {param.grad.mean()}")
+                    print(
+                        f"Gradient stats - min: {param.grad.min()}, max: {param.grad.max()}, mean: {param.grad.mean()}"
+                    )
                     print("Dropping into IPython for debugging...")
                     from IPython import embed
-                    embed(colors='linux')
+
+                    embed(colors="linux")
                     return
 
 
@@ -140,15 +151,12 @@ def main():
     from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
 
     rasus = []
-    num_rasus = len(set(data._rasu_ids))
+    num_rasus = data.num_asus
     for rasu_id in range(num_rasus):
-        # Only info (i.e. cell, spacegroup, dmin) from the first dataset of each RASU
-        # is used to construct the ReciprocalASU object.
-        dataset_idx = data._rasu_ids.index(rasu_id)
         rasu = ReciprocalASU(
-            data.dataset.datasets[dataset_idx].cell,
-            data.dataset.datasets[dataset_idx].spacegroup,
-            data.dataset.datasets[dataset_idx].dmin,
+            data.cell[rasu_id],
+            data.spacegroup[rasu_id],
+            data.dmin,
             anomalous=args.anomalous,
         )
         rasus.append(rasu)
@@ -205,7 +213,9 @@ def main():
         GradientValidator(),
     ]
 
-    wandb_logger = WandbLogger(project="abismal_torch", save_dir=args.out_dir, name=args.log_run_name)
+    wandb_logger = WandbLogger(
+        project="abismal_torch", save_dir=args.out_dir, name=args.log_run_name
+    )
     wandb_logger.watch(surrogate_posterior.distribution, log_freq=1)
 
     def check_posterior_grad_hook(grad):
@@ -234,7 +244,6 @@ def main():
             trainer.logger.experiment.log(grad_stats)
 
     surrogate_posterior.distribution.loc.register_hook(check_posterior_grad_hook)
-
 
     trainer = L.Trainer(
         deterministic=True,
