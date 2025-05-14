@@ -62,7 +62,20 @@ args_and_kwargs = (
             "type": str,
         },
     ),
-    
+    (
+        ("--pin-memory",),
+        {
+            "help": "Pin memory for the DataLoader.",
+            "action": "store_true",
+        },
+    ),
+    (
+        ("--persistent-workers",),
+        {
+            "help": "Persistent workers for the DataLoader.",
+            "action": "store_true",
+        },
+    ),
     # (
     #     ("--separate",),
     #     {

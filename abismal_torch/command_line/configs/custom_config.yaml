@@ -5,3 +5,6 @@ trainer:
       project: "abismal_torch"
       name: "my_test_run"
       save_dir: null # will be set as the mtz output directory supplied by user
+
+data:
+  persistent_workers: true
