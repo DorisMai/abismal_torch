@@ -47,9 +47,13 @@ This project uses [`poetry`](https://python-poetry.org/docs/basic-usage/), which
   poetry env use /path/to/python
   ```
 
-3.Install the project dependencies:
+3. Install the project dependencies:
   ```
   poetry install
+  ```
+  To update the dependencies, run:
+  ```
+  poetry update
   ```
 
 ### Testing
