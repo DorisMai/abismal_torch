@@ -1,0 +1,7 @@
+trainer:
+  logger:
+    class_path: lightning.pytorch.loggers.WandbLogger
+    init_args:
+      project: "abismal_torch"
+      name: "my_test_run"
+      save_dir: null # will be set as the mtz output directory supplied by user

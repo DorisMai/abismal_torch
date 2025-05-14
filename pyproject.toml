@@ -14,6 +14,7 @@ gemmi = ">=0.5.5,<=0.7.1"
 reciprocalspaceship = "^1.0.0"
 rs-distributions = "^0.0.3"
 matplotlib = ">=3.9.0"
+jsonargparse = {version = ">=4.27.7", extras = ["signatures"]}
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.0.0"

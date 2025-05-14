@@ -1,0 +1,11 @@
+data:
+  mtz_files: /Users/dorismai/Desktop/unmerged.mtz  # Required: path or list of paths to MTZ files
+  dmin: 1.8  # Required: highest resolution limit
+  anomalous: true  # Whether the data is anomalous
+  cell: null  # Optional, a list of 6 floats if specified
+  spacegroup: null  # Optional
+  rasu_ids: null  # List of RASU ids for each MTZ file. Optional.
+  batch_size: 100  # Number of images per batch
+  wavelength: null  # Wavelength for data loader. Optional.
+  test_fraction: 0.05
+  num_workers: 2
