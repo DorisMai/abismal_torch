@@ -22,7 +22,7 @@ class ReciprocalASU(torch.nn.Module):
         spacegroup: gemmi.SpaceGroup,
         dmin: float,
         anomalous: Optional[bool] = True,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         Base Layer that maps observed reflections to the reciprocal asymmetric unit (rasu).
@@ -85,6 +85,19 @@ class ReciprocalASU(torch.nn.Module):
             torch.tensor(go.epsilon_factor_array(H_rasu), dtype=torch.float32),
         )
 
+    def _validate_gather_inputs(self, source: torch.Tensor, H: torch.Tensor) -> None:
+        """
+        Validate inputs for the gather method.
+        """
+        if len(source.shape) == 0 or source.shape[0] < self.rasu_size:
+            raise ValueError(
+                f"Expected source to have shape (N, ...) where N >= {self.rasu_size}, got shape {source.shape}"
+            )
+        if len(H.shape) != 2 or H.shape[1] != 3:
+            raise ValueError(
+                f"Expected H to be a 2D tensor with shape (n_refln, 3), got shape {H.shape}"
+            )
+
     def gather(self, source: torch.Tensor, H: torch.Tensor) -> torch.Tensor:
         """
         Parameters:
@@ -94,6 +107,8 @@ class ReciprocalASU(torch.nn.Module):
         Returns:
             gathered (torch.Tensor): A tensor of shape (n_refln, ...)
         """
+        self._validate_gather_inputs(source, H)
+        # Gather
         idx = self.reflection_id_grid[tuple(H.T)]
         gathered = source[idx]
         return gathered
@@ -157,6 +172,25 @@ class ReciprocalASUCollection(torch.nn.Module):
             )
             offset += rasu.rasu_size
 
+    def _validate_gather_inputs(
+        self, source: torch.Tensor, rasu_id: torch.Tensor, H: torch.Tensor
+    ) -> None:
+        """
+        Validate inputs for the gather method.
+        """
+        if len(source.shape) == 0 or source.shape[0] < self.rac_size:
+            raise ValueError(
+                f"Expected source to have shape (N, ...) where N >= {self.rac_size}, got shape {source.shape}"
+            )
+        if len(H.shape) != 2 or H.shape[1] != 3:
+            raise ValueError(
+                f"Expected H to be a 2D tensor with shape (n_refln, 3), got shape {H.shape}"
+            )
+        if len(rasu_id.shape) != 1 or rasu_id.shape[0] != H.shape[0]:
+            raise ValueError(
+                f"Expected rasu_id to have shape (n_refln,) where n_refln = {H.shape[0]}, got shape {rasu_id.shape}"
+            )
+
     def gather(
         self, source: torch.Tensor, rasu_id: torch.Tensor, H: torch.Tensor
     ) -> torch.Tensor:
@@ -170,6 +204,7 @@ class ReciprocalASUCollection(torch.nn.Module):
         Returns:
             gathered (torch.Tensor): A tensor of shape (n_refln, ...).
         """
+        self._validate_gather_inputs(source, rasu_id, H)
         h, k, l = H.T
         idx = self.reflection_id_grid[rasu_id, h, k, l]
         gathered = source[idx]
@@ -191,7 +226,7 @@ class ReciprocalASUGraph(ReciprocalASUCollection):
         *rasus: ReciprocalASU,
         parents: Optional[torch.Tensor] = None,
         reindexing_ops: Optional[Sequence[str]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         A graph of rasu objects.
