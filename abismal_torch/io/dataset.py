@@ -31,6 +31,16 @@ class AbismalDataset(Dataset):
         self.dmin = dmin
         self.reset()
 
+    @staticmethod
+    def _can_handle(input_files: Sequence) -> bool:
+        raise NotImplementedError("Can this handler parse input_files?")
+
+    @classmethod
+    def can_handle(cls, input_files: Union[Sequence, str]) -> bool:
+        if isinstance(files, str):
+            files = [files]
+        return cls._can_handle(files)
+
     @rasu_id.setter
     def rasu_id(self, rasu_id):
         self._rasu_id = rasu_id

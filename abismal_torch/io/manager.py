@@ -46,7 +46,7 @@ class IsomorphousDataModule(L.LightningDataModule):
         wavelength: Optional[float] = None,
         test_fraction: Optional[float] = 0.05,
         num_workers: Optional[int] = 0,
-        rasu_ids: Optional[List[int]] = None,
+        rasu_ids: Optional[Sequence[int]] = None,
         anomalous: Optional[bool] = False,
         cell: Optional[Union[gemmi.UnitCell, Sequence[float]]] = None,
         spacegroup: Optional[Union[gemmi.SpaceGroup, str, int]] = None,
@@ -70,10 +70,14 @@ class IsomorphousDataModule(L.LightningDataModule):
             anomalous (bool, optional): Whether the data is anomalous.
             cell (list[float], optional): a list of cell parameters. If provided, overrides the cell parameters in the MTZ file.
             spacegroup (str, optional): a spacegroup symbol. If provided, overrides the spacegroup in the MTZ file.
+            pin_memory (bool, optional): Whether to pin memory.
+            persistent_workers (bool, optional): Whether workers are persistent.
+            **handler_keargs (optional): Additional keyword arguments to pass to the file handler
         """
         super().__init__()
         self.dmin = dmin
         self.anomalous = anomalous
+        for 
         if isinstance(mtz_files, str):
             mtz_files = [mtz_files]
             rasu_ids (List[int], optional): List of RASU ids corresponding to each MTZ file.
@@ -107,6 +111,11 @@ class IsomorphousDataModule(L.LightningDataModule):
         self.test_fraction = test_fraction
         self.pin_memory = pin_memory
         self.persistent_workers = persistent_workers
+
+    def determine_handler_type(input_files: Union[str, Sequence[str]]) -> str:
+        for k,v in handler:
+            if v.can_handle(input_files):
+                return k
 
     def setup(self, stage: Optional[str] = None):
         # Random split based on images, not reflections

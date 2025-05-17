@@ -46,6 +46,13 @@ class MTZDataset(AbismalDataset):
         self.batch_key = batch_key
         self.wavelength = wavelength
 
+    @staticmethod
+    def _can_handle(input_files):
+        for f in input_files:
+            if not f.endswith(".mtz"):
+                return False
+        return True
+
     @mtz_file.setter
     def mtz_file(self, mtz_file):
         self.reset()

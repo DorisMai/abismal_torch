@@ -50,6 +50,13 @@ class StillsDataset(AbismalDataset):
         if self.spacegroup is None:
             self.spacegroup = StillsDataset.get_space_group([self.expt_file])
 
+    @staticmethod
+    def _can_handle(input_files):
+        for f in input_files:
+            if f.split('.')[-1] not in ("expt", "refl", "pickle"):
+                return False
+        return True
+
     @property
     def refl_file(self):
         return self._refl_file
