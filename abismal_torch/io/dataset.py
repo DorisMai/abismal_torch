@@ -25,6 +25,7 @@ class AbismalDataset(Dataset):
             - If self.cell or self.spacegroup are changed, obey the new values when filtering by resolution
             - implement _can_handle and _load_tensor_data methods
             - optionally overload __len__ with a lazy version. 
+            - overload the classmethod `from_sequence` if more than one input file is required. for instance in the case of dials .expt and .refl file pairs.
         """
         self.cell = cell
         self.spacegroup = spacegroup
@@ -32,6 +33,10 @@ class AbismalDataset(Dataset):
         self.rasu_id = rasu_id
         self.dmin = dmin
         self.reset()
+
+    @classmethod
+    def from_sequence(cls, input_files, *args, **kwargs):
+        return [cls(f, *args, **kwargs) for f in input_files]
 
     @staticmethod
     def _can_handle(input_files: Sequence) -> bool:
