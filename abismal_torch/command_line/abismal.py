@@ -136,9 +136,9 @@ def main():
     L.seed_everything(args.seed)
 
     # ========== load data ==========#
-    from abismal_torch.io.manager import MTZDataModule
+    from abismal_torch.io.manager import IsomorphousDataModule
 
-    data = MTZDataModule(
+    data = IsomorphousDataModule(
         args.inputs,
         batch_size=args.batch_size,
         num_workers=args.num_cpus,
