@@ -77,35 +77,29 @@ class IsomorphousDataModule(L.LightningDataModule):
         super().__init__()
         self.dmin = dmin
         self.anomalous = anomalous
-        for 
-        if isinstance(mtz_files, str):
-            mtz_files = [mtz_files]
-            rasu_ids (List[int], optional): List of RASU ids corresponding to each MTZ file.
-            cell: (gemmi.Spacegroup
-            **handler_kwargs (optional): Additional keyword arguments for the data handlers.
-        if isinstance(input_files, str):
-            input_files = [input_files]
 
-        self.num_asus = len(mtz_files)
-        datasets = []
-        # if rasu_ids is None:
-        #     rasu_ids = list(range(self.num_asus))
-        if rasu_ids is not None:
-            mtz_files = [x for _, x in sorted(zip(rasu_ids, mtz_files))]
-        rasu_ids = list(range(self.num_asus))
-        for mtz_file, rasu_id in zip(mtz_files, rasu_ids):
-            dataset = MTZDataset(
-                mtz_file,
-                dmin=dmin,
-                wavelength=wavelength,
-                rasu_id=rasu_id,
-                cell=cell,
-                spacegroup=spacegroup,
-            )
-            datasets.append(dataset)
-        self.cell = [dataset.cell for dataset in datasets]
-        self.spacegroup = [dataset.spacegroup for dataset in datasets]
+        handler_type = self.determine_handler_type(input_files)
+        handler = self.handlers[handler_type]
+        datasets = handler.from_sequence(
+            input_files, dmin=dmin, wavelength=wavelength, rasu_id=rasu_id, 
+            cell=cell, spacegroup=spacegroup
+        )
+
+        self.cell = np.zeros(6)
+        count = 0
+        for ds in datasets:
+            n = len(ds)
+            cell = np.array(ds.cell.parameters())
+            count += n
+        self.cell = self.cell / count
+        self.cell = gemmi.UnitCell(*cell)
+
+        self.spacegroup = datasets[0].spacegroup
+        for ds in datasets:
+            ds.spacegroup = spacegroup
+            ds.cell = self.cell
         self.dataset = ConcatDataset(datasets)
+
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.test_fraction = test_fraction
