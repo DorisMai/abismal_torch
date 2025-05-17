@@ -1,4 +1,4 @@
-from typing import Optional,List
+from typing import Optional,List,Sequence,Union
 from torch.utils.data import Dataset
 from reciprocalspaceship.decorators import cellify,spacegroupify
 
@@ -48,14 +48,18 @@ class AbismalDataset(Dataset):
             files = [files]
         return cls._can_handle(files)
 
+    @property
+    def rasu_id(self):
+        return self._rasu_id
+
     @rasu_id.setter
     def rasu_id(self, rasu_id):
         self._rasu_id = rasu_id
         self.reset()
 
     @property
-    def rasu_id(self):
-        return self._rasu_id
+    def wavelength(self):
+        return self._wavelength
 
     @wavelength.setter
     def wavelength(self, wavelength):
@@ -63,8 +67,8 @@ class AbismalDataset(Dataset):
         self.reset()
 
     @property
-    def wavelength(self):
-        return self._wavelength
+    def cell(self):
+        return self._cell
 
     @cell.setter
     def cell(self, cell):
@@ -72,17 +76,13 @@ class AbismalDataset(Dataset):
         self.reset()
 
     @property
-    def cell(self):
-        return self._cell
+    def dmin(self):
+        return self._dmin
 
     @dmin.setter
     def dmin(self, dmin):
         self._dmin = dmin
         self.reset()
-
-    @property
-    def dmin(self):
-        return self._dmin
 
     def reset(self):
         self._tensor_data = None
