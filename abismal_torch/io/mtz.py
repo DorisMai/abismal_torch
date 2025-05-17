@@ -1,11 +1,12 @@
 from typing import List, Optional
 
 import reciprocalspaceship as rs
+from abismal_torch.io.dataset import AbismalDataset
 import torch
 from torch.utils.data import Dataset
 
 
-class MTZDataset(Dataset):
+class MTZDataset(AbismalDataset):
     def __init__(
         self,
         mtz_file: str,
@@ -34,16 +35,33 @@ class MTZDataset(Dataset):
             rasu_id (int, optional): a rasu id. Defaults to 0.
             dmin (float, optional): Highest resolution to include.
         """
-        ds = rs.read_mtz(mtz_file)
-        self.cell = cell
-        self.spacegroup = spacegroup
-        self.wavelength = wavelength
-        self.rasu_id = rasu_id
-        self.dmin = dmin
+        super().__init__(
+            cell=cell,
+            spacegroup=spacegroup,
+            wavelength=wavelength,
+            rasu_id=rasu_id,
+            dmin=dmin,
+        )
+        self.mtz_file = mtz_file
         self.batch_key = batch_key
-        self.intensity_key = intensity_key
-        self.sigma_key = sigma_key
-        self.metadata_keys = metadata_keys
+        self.wavelength = wavelength
+
+    @mtz_file.setter
+    def mtz_file(self, mtz_file):
+        self.reset()
+        self._mtz_file = mtz_file
+
+    @property
+    def mtz_file(self):
+        return self._mtz_file
+
+    def _load_tensor_data(self):
+        ds = rs.read_mtz(self.mtz_file)
+
+        batch_key = batch_key
+        intensity_key = intensity_key
+        sigma_key = sigma_key
+        metadata_keys = metadata_keys
 
         if self.cell is None:
             self.cell = ds.cell.parameters
@@ -70,36 +88,17 @@ class MTZDataset(Dataset):
         ds["image_id"] = ds.groupby(self.batch_key).ngroup()
         ds.sort_values("image_id", inplace=True)
 
-        self.image_id = torch.tensor(ds.image_id.to_numpy("int64"))
-        self.rasu_id = torch.ones_like(self.image_id, dtype=torch.int64) * self.rasu_id
-        self.hkl_in = torch.tensor(ds.get_hkls())
-        self.resolution = torch.tensor(ds.dHKL.to_numpy())
-        self.wavelength = (
-            torch.ones_like(self.image_id, dtype=torch.float32) * self.wavelength
-        )
-        self.metadata = torch.tensor(ds[self.metadata_keys].to_numpy())
-        self.Iobs = torch.tensor(ds[self.intensity_key].to_numpy())
-        self.SigIobs = torch.tensor(ds[self.sigma_key].to_numpy())
-        # Create image_id to indices mapping for fast lookup
-        self.imageid_to_dataid = {}
-        for img_id in range(self.image_id.max() + 1):
-            self.imageid_to_dataid[img_id] = torch.where(self.image_id == img_id)[0]
-
-    def __len__(self):
-        return self.image_id.max() + 1
-
-    def __getitem__(self, idx):
-        indices = self.imageid_to_dataid[idx]
-        return {
-            "image_id": self.image_id[indices],
-            "rasu_id": self.rasu_id[indices],
-            "hkl_in": self.hkl_in[indices],
-            "resolution": self.resolution[indices],
-            "wavelength": self.wavelength[indices],
-            "metadata": self.metadata[indices],
-            "iobs": self.Iobs[indices],
-            "sigiobs": self.SigIobs[indices],
+       self._tensor_data = {
+            "image_id" : torch.tensor(ds.image_id.to_numpy("int32")),
+            "rasu_id" : torch.ones(len(ds), dtype=torch.int32) * self.rasu_id,
+            "hkl_in" : torch.tensor(ds.get_hkls()),
+            "resolution" : torch.tensor(ds.dHKL.to_numpy()),
+            "wavelength" : torch.ones(len(ds), dtype=torch.float32) * self.wavelength,
+            "metadata" : torch.tensor(ds[self.metadata_keys].to_numpy()),
+            "iobs" : torch.tensor(ds[self.intensity_key].to_numpy()), 
+            "sigiobs" : torch.tensor(ds[self.sigma_key].to_numpy()),
         }
+
 
     def _get_first_key_of_type(self, ds, dtype):
         idx = ds.dtypes == dtype

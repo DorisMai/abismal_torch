@@ -1,105 +1,102 @@
 from typing import List, Optional, Sequence
 
 import reciprocalspaceship as rs
+from reciprocalspaceship.decorators import spacegroupify,cellify
 import torch
 from torch.utils.data import Dataset,IterableDataset
 import gemmi
 import numpy as np
+from abismal_torch.io.dataset import AbismalDataset
 
-
-class StillsDataset(IterableDataset):
+class StillsDataset(AbismalDataset):
+    @cellify
+    @spacegroupify
     def __init__(
         self,
-        expt_files: Sequence[str],
-        refl_files: Sequence[str],
-        cell: Optional[List[float]] = None,
+        refl_file: str,
+        expt_file: str,
+        cell: Optional[Sequence[float]] = None,
         spacegroup: Optional[str] = None,
         wavelength: Optional[float] = None,
         rasu_id: Optional[int] = 0,
         dmin: Optional[float] = 0.,
-        max_nrefln_per_image: Optional[int] = 512,
     ):
         """
         Custom Pytorch Dataset Class for DIALS Data
 
         Args:
-            expt_files (Sequence[str]): An interable of experiment file names
-            refl_files (Sequence[str]): An interable of reflection file names
+            refl_file (str): A DIALS reflection (.refl) file name
             cell (list[float], optional): a list of cell parameters. If provided, overrides the cell parameters in the MTZ file.
             spacegroup (str, optional): a spacegroup symbol. If provided, overrides the spacegroup in the MTZ file.
             wavelength (float, optional): a wavelength. By default this will be read from the .expt files. 
             rasu_id (int, optional): a rasu id. Defaults to 0.
             dmin (float, optional): Highest resolution to include.
-            max_nrefln_per_image (int, optional): Maximum number of reflections per image to include in a training batch. This is
-                used to avoid loading too many reflections into memory at once. Defaults to 2048.
+            expt_file (str): A DIALS experiment (.expt) file name
         """
         super().__init__()
-        self.cell = cell
+        self._cell = cell
         self.spacegroup = spacegroup
         self.wavelength = wavelength
         self.rasu_id = rasu_id
         self.dmin = dmin
-        self.expt_files = expt_files
-        self.refl_files = refl_files
+        self.expt_file = expt_file
+        self.refl_file = refl_file
         if len(expt_files) != len(refl_files):
             raise ValueError("len(expt_files) is not the same as len(refl_files)")
 
         # Try to be smart and use the inputs to infer the symmetry 
         if self.cell is None:
-            self.cell = StillsDataset.get_average_cell(expt_files)
+            self.cell = StillsDataset.get_average_cell([self.expt_file])
         if self.spacegroup is None:
-            self.spacegroup = StillsDataset.get_space_group(expt_files)
-        self.max_nrefln_per_image = max_nrefln_per_image
+            self.spacegroup = StillsDataset.get_space_group([self.expt_file])
 
+    @property
+    def refl_file(self):
+        return self._refl_file
+
+    @refl_file.setter
+    def refl_file(self, refl_file):
+        if refl_file != self._refl_file:
+            self._refl_file = refl_file
+            self._tensor_data = None
+            self._image_indices = {}
+
+    @property
+    def expt_file(self, expt_file):
+        return self._expt_file
+
+    @expt_file.setter
+    def expt_file(self, expt_file):
         from dxtbx.model.experiment_list import ExperimentListFactory
-        self.batch_offsets = {}
-        count = 0
-        for efile in expt_files:
-            self.batch_offsets[efile] = count
-            elist = ExperimentListFactory.from_json_file(efile, check_format=False)
-            count = count + len(elist)
-        self.count_max = count
+        self.elist = ExperimentListFactory.from_json_file(expt_file, check_format=False)
+        self._expt_file = expt_file
+        if self._cell is None:
+            self.get_average_cell(elist)
+            self.get_space_group(elist)
 
     @staticmethod
-    def get_average_cell(expt_files: Sequence[str]) -> gemmi.UnitCell:
-        from dxtbx.model.experiment_list import ExperimentListFactory
-        cell = np.zeros(6)
-        l = 0
-        from tqdm import tqdm
-        print("Determining unit cell ...")
-        for efile in tqdm(expt_files):
-            elist = ExperimentListFactory.from_json_file(efile, check_format=False)
-            crystals = elist.crystals()
-            cell += np.array([c.get_unit_cell().parameters() for c in crystals]).sum(0)
-            l += len(crystals)
-        cell = cell/l
+    def get_average_cell(elist) -> gemmi.UnitCell:
+        crystals = elist.crystals()
+        cell = np.array([c.get_unit_cell().parameters() for c in crystals]).mean(0)
         cell = gemmi.UnitCell(*cell)
-        print(f"Average cell: {cell}")
         return cell
-        from dxtbx.model.experiment_list import ExperimentListFactory
 
     @staticmethod
-    def get_space_group(expt_files: Sequence[str], check_consistent=False) -> gemmi.SpaceGroup:
-        from dxtbx.model.experiment_list import ExperimentListFactory
-        hm = None
-        for efile in expt_files:
-            elist = ExperimentListFactory.from_json_file(efile, check_format=False)
-            hm = elist.crystals()[0].get_space_group().type().universal_hermann_mauguin_symbol()
-            if not check_consistent:
-                sg = gemmi.SpaceGroup(hm)
-                return sg
-            for cid,c in enumerate(elist.crystals()):
-                _hm = c.get_space_group().type().universal_hermann_mauguin_symbol()
-                if not _hm == hm:
-                    raise ValueError(f"Crystal {cid} from {efile} has Universal Hermann Mauguin symbol {_hm} but {hm} was expected")
-        hm = gemmi.SpaceGroup(hm)
+    def get_space_group(elist, check_consistent=False) -> gemmi.SpaceGroup:
+        hm = elist.crystals()[0].get_space_group().type().universal_hermann_mauguin_symbol()
+        sg = gemmi.SpaceGroup(hm)
+        if not check_consistent:
+            return sg
+        for cid,c in enumerate(elist.crystals()):
+            _hm = c.get_space_group().type().universal_hermann_mauguin_symbol()
+            if not _hm == hm:
+                raise ValueError(f"Crystal {cid} has Universal Hermann Mauguin symbol {_hm} but {hm} was expected")
         return sg
 
-    def iter_images(self, expt_file: Sequence[str], refl_file: Sequence[str]):
+    def _load(self):
         from dials.array_family import flex
-        from dxtbx.model.experiment_list import ExperimentListFactory 
-        table = flex.reflection_table().from_file(refl_file)
-        elist = ExperimentListFactory.from_json_file(expt_file, check_format=False)
+        table = self._refls
+        elist = self.elist
 
         batch = flex.size_t(np.array(table['id']))
 
@@ -133,36 +130,37 @@ class StillsDataset(IterableDataset):
         wavelength = torch.tensor(table['wavelength'], dtype=torch.float32)[:,None]
         rasu_id = self.rasu_id * torch.ones((self.max_nrefln_per_image,1), dtype=batch.dtype)
 
-        for m in torch.unique(batch):
-            idx = batch == m
-            image = {
-                "image_id" : batch[idx,None],
-                "hkl_in" : hkl[idx],
-                "resolution" : d[idx],
-                "wavelength" : wavelength[idx],
-                "metadata" : metadata[idx],
-                "iobs" : iobs[idx], 
-                "sigiobs" : sigiobs[idx],
-            }
+        self._tensor_data = {
+            "image_id" : batch,
+            "hkl_in" : hkl,
+            "resolution" : d,
+            "wavelength" : wavelength,
+            "metadata" : metadata,
+            "iobs" : iobs, 
+            "sigiobs" : sigiobs,
+        }
 
-            #Resample uniform shape
-            idx = torch.randint(idx.sum(), size=(self.max_nrefln_per_image,))
-            image = {k:v[idx] for k,v in image.items()}
-            image["rasu_id"] = rasu_id
-            yield image
+    def __getitem__(self, idx):
+        if self._tensor_data is None:
+            self._load()
 
-    def __iter__(self):
-        worker_info = torch.utils.data.get_worker_info()
-        num_workers = 1
-        worker_id = 0
-        if worker_info is not None:
-            num_workers = worker_info.num_workers
-            worker_id = worker_info.id
-        file_ids = np.arange(len(self.expt_files))
-        file_ids = np.array_split(file_ids, num_workers)[worker_id]
-        for file_id in file_ids:
-            expt_file = self.expt_files[file_id]
-            refl_file = self.refl_files[file_id]
-            for image in self.iter_images(expt_file, refl_file):
-                yield image
+        if idx in self._image_indices:
+            idx = self._image_indices[idx]
+        else:
+            idx = self._tensor_data['image_id'] == idx
+
+        return {k:v[idx] for k,v in self._refls_tensors.items()}
+
+    def __len__(self):
+        return len(self.elist)
+
+
+if __name__=='__main__':
+    ds = StillsDataset(
+            '/Users/kmdalton/xtal/abismal_examples/cxidb_81/reflection_data/01.json',
+            '/Users/kmdalton/xtal/abismal_examples/cxidb_81/reflection_data/01.pickle',
+    )
+
+    from IPython import embed
+    embed(colors='linux')
 

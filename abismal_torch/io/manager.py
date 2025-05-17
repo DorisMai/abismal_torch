@@ -1,12 +1,13 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Sequence
 
 import lightning as L
 import torch
 from torch.utils.data import ConcatDataset, DataLoader, random_split
+from reciprocalspaceship.decorators import cellify,spacegroupify
 
 from abismal_torch.io.mtz import MTZDataset
-
-
+from abismal_torch.io.stills import StillsDataset
+        
 def collate_fn(batch):
     """
     Custom collate function to handle batches of image reflections.
@@ -30,28 +31,34 @@ def collate_fn(batch):
 
     return result
 
-
-class MTZDataModule(L.LightningDataModule):
+class IsomorphousDataModule(L.LightningDataModule):
+    handlers = {
+        'mtz' : MTZDataset,
+        'dials' : StillsDataset,
+    }
+    @cellify
+    @spacegroupify
     def __init__(
         self,
-        mtz_files: Union[str, List[str]],
-        dmin: float,
+        input_files: Union[str, Sequence[str]],
+        dmin : float,
         batch_size: Optional[int] = 1,
         wavelength: Optional[float] = None,
         test_fraction: Optional[float] = 0.05,
         num_workers: Optional[int] = 0,
         rasu_ids: Optional[List[int]] = None,
         anomalous: Optional[bool] = False,
-        cell: Optional[List[float]] = None,
-        spacegroup: Optional[str] = None,
+        cell: Optional[Union[gemmi.UnitCell, Sequence[float]]] = None,
+        spacegroup: Optional[Union[gemmi.SpaceGroup, str, int]] = None,
         pin_memory: Optional[bool] = False,
         persistent_workers: Optional[bool] = False,
+        **handler_kwargs: Optional,
     ):
         """
         Load MTZ files using LightningDataModule.
 
         Args:
-            mtz_files (str or list[str]): a path or a list of paths to the MTZ files.
+            input_files (str or Sequence[str]): a path or a list of paths to the reflection files.
             dmin (float): The highest resolution limit.
             batch_size (int, optional): The batch size for the data loader (number of images per batch).
             wavelength (float, optional): The wavelength for the data loader.
@@ -69,6 +76,11 @@ class MTZDataModule(L.LightningDataModule):
         self.anomalous = anomalous
         if isinstance(mtz_files, str):
             mtz_files = [mtz_files]
+            rasu_ids (List[int], optional): List of RASU ids corresponding to each MTZ file.
+            cell: (gemmi.Spacegroup
+            **handler_kwargs (optional): Additional keyword arguments for the data handlers.
+        if isinstance(input_files, str):
+            input_files = [input_files]
 
         self.num_asus = len(mtz_files)
         datasets = []
