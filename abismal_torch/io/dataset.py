@@ -23,6 +23,8 @@ class AbismalDataset(Dataset):
             - Accept cell, spacegroup, wavelength, rasu_id, and dmin kwargs
             - If cell or spacegroup are None, populate them in the subclasses __init__
             - If self.cell or self.spacegroup are changed, obey the new values when filtering by resolution
+            - implement _can_handle and _load_tensor_data methods
+            - optionally overload __len__ with a lazy version. 
         """
         self.cell = cell
         self.spacegroup = spacegroup
