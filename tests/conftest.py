@@ -3,6 +3,7 @@ import pytest
 import torch
 
 from abismal_torch.symmetry import ReciprocalASU, ReciprocalASUGraph
+from os.path import abspath, dirname, join
 
 
 @pytest.fixture
