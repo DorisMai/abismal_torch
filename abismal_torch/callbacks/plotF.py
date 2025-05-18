@@ -4,7 +4,6 @@ from typing import Optional
 import lightning.pytorch as L
 import matplotlib.pyplot as plt
 import torch
-import wandb
 
 
 class PosteriorPlotter(L.Callback):
@@ -22,6 +21,7 @@ class PosteriorPlotter(L.Callback):
     def on_train_epoch_end(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
+        import wandb
         if trainer.current_epoch % self.save_every_n_epoch == 0:
             fig = self._plot_posterior(trainer, pl_module)
             # fig.savefig(os.path.join(trainer.logger.save_dir, f"posterior_epoch{trainer.current_epoch}.png"))
@@ -36,6 +36,7 @@ class PosteriorPlotter(L.Callback):
 
     def on_train_end(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
         fig = self._plot_posterior(trainer, pl_module)
+        import wandb
         wandb.log(
             {"posterior": [wandb.Image(fig, caption="Final posterior")]},
             step=trainer.current_epoch,

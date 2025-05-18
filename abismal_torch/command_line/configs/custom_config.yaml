@@ -11,6 +11,9 @@ trainer:
         monitor: "val_loss"
         min_delta: 0.5
         patience: 2
+    # - class_path: abismal_torch.callbacks.plotF.PosteriorPlotter
+    #   init_args:
+    #     save_every_n_epoch: 2
 
 
 data:
