@@ -1,16 +1,10 @@
 trainer:
   accelerator: "cpu"
-  max_steps: 30 #30_000
+  max_steps: 300 #30_000
   deterministic: true
   log_every_n_steps: 10
-  check_val_every_n_epoch: 10
+  check_val_every_n_epoch: 1
   default_root_dir: /Users/dorismai/Desktop/abismal_torch/tmp_outdir # user supply
-  # logger:
-  #   class_path: lightning.pytorch.loggers.WandbLogger
-  #   init_args:
-  #     project: "abismal_torch"
-  #     name: "my_test_run"
-  #     save_dir: null # will be set as the mtz output directory supplied by user
 
 optimizer:
   class_path: torch.optim.Adam

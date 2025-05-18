@@ -4,7 +4,18 @@ trainer:
     init_args:
       project: "abismal_torch"
       name: "my_test_run"
-      save_dir: null # will be set as the mtz output directory supplied by user
+      save_dir: null # will be set as the mtz output directory supplied by user'
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.early_stopping.EarlyStopping
+      init_args:
+        monitor: "val_loss"
+        min_delta: 0.5
+        patience: 2
+
 
 data:
   persistent_workers: true
+
+seed_everything: 42
+mtz_output:
+  save_every_n_epoch: 2

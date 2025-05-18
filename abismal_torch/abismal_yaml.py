@@ -157,6 +157,23 @@ class AbismalLitModule(L.LightningModule):
             }
         )
         return val_loss
+    
+    def test_step(self, batch, batch_idx):
+        xout = self.merging_model(batch)
+        test_loss = (
+            xout["loss_nll"].mean()
+            + self.kl_weight * xout["loss_kl"].mean()
+            + xout["scale_kl_div"].mean()
+        )
+        self.log_dict(
+            {
+                "test_loss": test_loss,
+                "test_NLL": xout["loss_nll"].mean(),
+                "test_KL": xout["loss_kl"].mean(),
+                "test_scale_KL": xout["scale_kl_div"].mean(),
+            }
+        )
+        return test_loss
 
     def configure_optimizers(self):
         optimizer_class = self.hparams.optimizer.class_path
@@ -179,11 +196,15 @@ class MyCLI(LightningCLI):
         parser.link_arguments(
             "trainer.default_root_dir", "trainer.logger.init_args.save_dir"
         )
-        # parser.add_argument("--ckpt_path", type=str, default=None) # only if run=False for MyCLI
+        parser.add_argument("--ckpt_path", type=str, default=None) # only if run=False for MyCLI
 
         # configure forced callbacks for MTZSaver
         parser.add_lightning_class_args(MTZSaver, "mtz_output")
-        # default values of MTZSaver can only be overwritten via command line flags but not yaml files
+        # ================================= Note on callback args =================================
+        # If using run=True for LightningCLI with subcommand "fit", default values of MTZSaver can 
+        # only be overwritten via command line flags but not yaml files. This issue seems absent in
+        # instantiation only mode.
+        # ====================================== End of note ======================================
         parser.set_defaults(
             {"mtz_output.save_every_n_epoch": 1, "mtz_output.out_dir": None}
         )
@@ -194,21 +215,35 @@ def main():
     import os
 
     config_dir = "abismal_torch/command_line/configs"
+    # cli = MyCLI(
+    #     AbismalLitModule,
+    #     MTZDataModule,
+    #     parser_kwargs={
+    #         "fit": {
+    #             "default_config_files": [
+    #                 os.path.join(config_dir, "data_config.yaml"),
+    #                 os.path.join(config_dir, "training_config.yaml"),
+    #                 os.path.join(config_dir, "merging_model_config.yaml"),
+    #             ],
+    #         }
+    #     },
+    # )
+
+    # Instantiation only mode
     cli = MyCLI(
         AbismalLitModule,
         MTZDataModule,
-        # run=False,
+        run=False,
         parser_kwargs={
-            "fit": {
-                "default_config_files": [
-                    os.path.join(config_dir, "data_config.yaml"),
-                    os.path.join(config_dir, "training_config.yaml"),
-                    os.path.join(config_dir, "merging_model_config.yaml"),
-                ],
-            }
-        },
+            "default_config_files": [
+                os.path.join(config_dir, "data_config.yaml"),
+                os.path.join(config_dir, "training_config.yaml"),
+                os.path.join(config_dir, "merging_model_config.yaml"),
+            ],
+        }
     )
-    # cli.trainer.fit(cli.model, cli.datamodule)
+    cli.trainer.fit(cli.model, cli.datamodule)
+    cli.trainer.test(cli.model, cli.datamodule)
 
 
 if __name__ == "__main__":

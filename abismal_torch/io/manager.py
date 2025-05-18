@@ -38,6 +38,7 @@ class MTZDataModule(L.LightningDataModule):
         dmin: float,
         batch_size: Optional[int] = 1,
         wavelength: Optional[float] = None,
+        validation_fraction: Optional[float] = 0.05,
         test_fraction: Optional[float] = 0.05,
         num_workers: Optional[int] = 0,
         rasu_ids: Optional[List[int]] = None,
@@ -92,6 +93,7 @@ class MTZDataModule(L.LightningDataModule):
         self.dataset = ConcatDataset(datasets)
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.validation_fraction = validation_fraction
         self.test_fraction = test_fraction
         self.pin_memory = pin_memory
         self.persistent_workers = persistent_workers
@@ -99,11 +101,12 @@ class MTZDataModule(L.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         # Random split based on images, not reflections
         total_len = len(self.dataset)
-        val_size = int(total_len * self.test_fraction)
-        train_size = total_len - val_size
-        self.train_dataset, self.val_dataset = random_split(
+        val_size = int(total_len * self.validation_fraction)
+        test_size = int(total_len * self.test_fraction)
+        train_size = total_len - val_size - test_size
+        self.train_dataset, self.val_dataset, self.test_dataset = random_split(
             self.dataset,
-            [train_size, val_size],
+            [train_size, val_size, test_size],
             generator=torch.Generator(),
         )
 
@@ -129,9 +132,12 @@ class MTZDataModule(L.LightningDataModule):
             persistent_workers=self.persistent_workers,
         )
 
-
-#    def transfer_batch_to_device(self, batch, device, dataloader_idx):
-#        return {
-#            key: (value.to(device) if isinstance(value, torch.Tensor) else value)
-#            for key, value in batch.items()
-#        }
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            collate_fn=collate_fn,
+            pin_memory=self.pin_memory,
+            persistent_workers=self.persistent_workers,
+        )
