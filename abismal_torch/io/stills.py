@@ -7,6 +7,8 @@ from torch.utils.data import Dataset,IterableDataset
 import gemmi
 import numpy as np
 from abismal_torch.io.dataset import AbismalDataset
+import json
+
 
 class StillsDataset(AbismalDataset):
     @cellify
@@ -46,14 +48,14 @@ class StillsDataset(AbismalDataset):
 
         # Try to be smart and use the inputs to infer the symmetry 
         if self.cell is None:
-            self.cell = StillsDataset.get_average_cell([self.expt_file])
+            self.cell = StillsDataset.get_average_cell(self.expt_file)
         if self.spacegroup is None:
             self.spacegroup = StillsDataset.get_space_group([self.expt_file])
 
     @staticmethod
     def _can_handle(input_files):
         for f in input_files:
-            if f.split('.')[-1] not in ("expt", "refl", "pickle"):
+            if f.split('.')[-1] not in ("expt", "refl"):
                 return False
         return True
 
@@ -65,8 +67,7 @@ class StillsDataset(AbismalDataset):
     def refl_file(self, refl_file):
         if refl_file != self._refl_file:
             self._refl_file = refl_file
-            self._tensor_data = None
-            self._image_indices = {}
+            self.reset()
 
     @property
     def expt_file(self, expt_file):
@@ -74,43 +75,83 @@ class StillsDataset(AbismalDataset):
 
     @expt_file.setter
     def expt_file(self, expt_file):
-        from dxtbx.model.experiment_list import ExperimentListFactory
         self.elist = ExperimentListFactory.from_json_file(expt_file, check_format=False)
         self._expt_file = expt_file
+        self.reset()
         if self._cell is None:
             self.get_average_cell(elist)
+        if self._space_group is None:
             self.get_space_group(elist)
 
     @staticmethod
-    def get_average_cell(elist) -> gemmi.UnitCell:
-        crystals = elist.crystals()
-        cell = np.array([c.get_unit_cell().parameters() for c in crystals]).mean(0)
-        cell = gemmi.UnitCell(*cell)
+    def real_space_axes_to_cell_params(
+        real_a : Sequence[float], 
+        real_b : Sequence[float], 
+        real_c Sequence[float]
+    ):
+        a,b,c = map(np.linalg.norm, (real_a, real_b, real_c))
+        alpha = rs.utils.angle_between(real_b, real_c)
+        beta  = rs.utils.angle_between(real_a, real_c)
+        gamma = rs.utils.angle_between(real_a, real_b)
+        for x in (90., 120.):
+            if np.isclose(alpha, x):
+                alpha = np.round(alpha)
+            if np.isclose(beta, x):
+                alpha = np.round(beta)
+            if np.isclose(gamma, x):
+                alpha = np.round(gamma)
+        return [a, b, c, alpha, beta, gamma]
+
+    @staticmethod
+    def get_average_cell(expt_file : str) -> gemmi.UnitCell:
+        import json
+        js = json.load(open(expt_file))
+        crystals = js['crystal']
+        cells =  []
+        for i,exp in js['experiment']:
+            cid = exp['crystal']
+            crystal = js['crystal'][cid]
+            cells.append(
+                StillsDataset.real_space_axes_to_cell_params(
+                    crystal['real_space_a'],
+                    crystal['real_space_b'],
+                    crystal['real_space_c'],
+                )
+            )
+        cell = np.array(cells).mean(0)
         return cell
 
     @staticmethod
-    def get_space_group(elist, check_consistent=False) -> gemmi.SpaceGroup:
-        hm = elist.crystals()[0].get_space_group().type().universal_hermann_mauguin_symbol()
-        sg = gemmi.SpaceGroup(hm)
-        if not check_consistent:
-            return sg
-        for cid,c in enumerate(elist.crystals()):
-            _hm = c.get_space_group().type().universal_hermann_mauguin_symbol()
-            if not _hm == hm:
-                raise ValueError(f"Crystal {cid} has Universal Hermann Mauguin symbol {_hm} but {hm} was expected")
+    def get_space_group(expt_file : str, check_consistent=False) -> gemmi.SpaceGroup:
+        import json
+        js = json.load(open(expt_file))
+
+        crystals = js['crystal']
+        cells =  []
+        sg = None
+        for i,exp in js['experiment']:
+            cid = exp['crystal']
+            crystal = js['crystal'][cid]
+            hall = crystal['space_group_hall_symbol']
+            go = gemmi.symops_from_hall(hall)
+            _sg = gemmi.find_spacegroup_by_ops(go)
+            if sg is None:
+                sg = _sg
+            if not check_consistent:
+                return _sg
+            if sg != _sg:
+                raise ValueError(
+                    f"Expected experiment {i} to have spacegroup {sg} but it has {_sg}."
+                )
         return sg
 
-    def _load(self):
-        from dials.array_family import flex
-        table = self._refls
-        elist = self.elist
+    def _load_tensor_data(self):
+        ds = rs.io.read_dials_stills(self.refl_file)
+        js = json.load(open(self.expt_file))
 
-        batch = flex.size_t(np.array(table['id']))
-
-        table.compute_d(elist)
-        table["A_matrix"] = flex.mat3_double( [C.get_A() for C in elist.crystals()] ).select(batch)
-        table["s0_vec"] = flex.vec3_double( [e.beam.get_s0() for e in elist] ).select(batch)
-        table["wavelength"] = flex.double( [e.beam.get_wavelength() for e in elist] ).select(batch)
+        #Compute wavelength sans experiment list
+        ds['wavelength'] = np.reciprocal(np.linalg.norm(ds[['s1.0', 's1.1', 's1.2']], axis=-1))
+        ds['wavelength'] = ds.groupby('BATCH')['wavelength'].transform('mean')
 
         #Remove systematic absences 
         present = ~self.spacegroup.operations().systematic_absences(table['miller_index'])
@@ -160,14 +201,4 @@ class StillsDataset(AbismalDataset):
 
     def __len__(self):
         return len(self.elist)
-
-
-if __name__=='__main__':
-    ds = StillsDataset(
-            '/Users/kmdalton/xtal/abismal_examples/cxidb_81/reflection_data/01.json',
-            '/Users/kmdalton/xtal/abismal_examples/cxidb_81/reflection_data/01.pickle',
-    )
-
-    from IPython import embed
-    embed(colors='linux')
 
