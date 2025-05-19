@@ -119,7 +119,7 @@ class AbismalDataset(Dataset):
     def __len__(self) -> int:
         """
         Expensive, fallback implementation of __len__. If possible overload this to avoid
-        calling _load_tensor_data.
+        calling _load_tensor_data. Alternatively you can set self._length.
         """
         if self._length is None:
             self._length = self.tensor_data['image_id'].max() + 1

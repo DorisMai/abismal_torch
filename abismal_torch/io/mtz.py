@@ -18,7 +18,7 @@ class MTZDataset(AbismalDataset):
         metadata_keys: Optional[List[str]] = None,
         wavelength: Optional[float] = None,
         rasu_id: Optional[int] = 0,
-        dmin: Optional[float] = None,
+        dmin: Optional[float] = 0.,
     ):
         """
         Custom Pytorch Dataset Class for MTZ files.
@@ -44,7 +44,10 @@ class MTZDataset(AbismalDataset):
         )
         self.mtz_file = mtz_file
         self.batch_key = batch_key
+        self.intensity_key = intensity_key
+        self.sigma_key = sigma_key
         self.wavelength = wavelength
+        self.metadata_keys = metadata_keys
 
     @staticmethod
     def _can_handle(input_files):
@@ -53,22 +56,17 @@ class MTZDataset(AbismalDataset):
                 return False
         return True
 
+    @property
+    def mtz_file(self):
+        return self._mtz_file
+
     @mtz_file.setter
     def mtz_file(self, mtz_file):
         self.reset()
         self._mtz_file = mtz_file
 
-    @property
-    def mtz_file(self):
-        return self._mtz_file
-
     def _load_tensor_data(self):
         ds = rs.read_mtz(self.mtz_file)
-
-        batch_key = batch_key
-        intensity_key = intensity_key
-        sigma_key = sigma_key
-        metadata_keys = metadata_keys
 
         if self.cell is None:
             self.cell = ds.cell.parameters
@@ -89,13 +87,12 @@ class MTZDataset(AbismalDataset):
             ]
 
         ds.compute_dHKL(True).label_absences(True)
-        ds = ds[~ds.ABSENT]
-        if self.dmin is not None:
-            ds = ds[ds.dHKL >= self.dmin]
+        ds = ds[(ds.dHKL >= self.dmin) & (~ds.ABSENT)]
+
         ds["image_id"] = ds.groupby(self.batch_key).ngroup()
         ds.sort_values("image_id", inplace=True)
 
-       self._tensor_data = {
+        self._tensor_data = {
             "image_id" : torch.tensor(ds.image_id.to_numpy("int32")),
             "rasu_id" : torch.ones(len(ds), dtype=torch.int32) * self.rasu_id,
             "hkl_in" : torch.tensor(ds.get_hkls()),

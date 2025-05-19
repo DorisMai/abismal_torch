@@ -15,8 +15,8 @@ class StillsDataset(AbismalDataset):
     @spacegroupify
     def __init__(
         self,
-        refl_file: str,
         expt_file: str,
+        refl_file: str,
         cell: Optional[Sequence[float]] = None,
         spacegroup: Optional[str] = None,
         wavelength: Optional[float] = None,
@@ -41,8 +41,8 @@ class StillsDataset(AbismalDataset):
         self.wavelength = wavelength
         self.rasu_id = rasu_id
         self.dmin = dmin
-        self.expt_file = expt_file
         self.refl_file = refl_file
+        self.expt_file = expt_file
 
     @staticmethod
     def _can_handle(input_files):
@@ -61,16 +61,13 @@ class StillsDataset(AbismalDataset):
         self.reset()
 
     @property
-    def expt_file(self, expt_file):
+    def expt_file(self):
         return self._expt_file
 
     @expt_file.setter
     def expt_file(self, expt_file):
         self._expt_file = expt_file
         self.reset()
-        with open(expt_file) as f:
-            js = json.load(f)
-        self._length = len(js['experiment'])
         if self.cell is None:
             self.cell = self.get_average_cell(expt_file)
         if self.spacegroup is None:
@@ -157,8 +154,8 @@ class StillsDataset(AbismalDataset):
         batch = torch.tensor(ds['BATCH'].to_numpy(), dtype=torch.int32) 
         rasu_id = self.rasu_id * torch.ones(len(ds), dtype=batch.dtype)
         hkl = torch.tensor(ds[['H', 'K', 'L']].to_numpy('int32'))
-        d = torch.tensor(ds['dHKL'], dtype=torch.float32)[:,None]
-        wavelength = torch.tensor(ds['wavelength'], dtype=torch.float32)[:,None]
+        d = torch.tensor(ds['dHKL'].to_numpy('float32'))
+        wavelength = torch.tensor(ds['wavelength'].to_numpy('float32'))
         metadata_keys = [
             'dHKL',
             'delpsical.rad',
@@ -170,8 +167,8 @@ class StillsDataset(AbismalDataset):
             #'xyzcal.px.2',
         ]
         metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
-        iobs  = torch.tensor(ds['intensity.sum.value'], dtype=torch.float32)[:,None]
-        sigiobs  = torch.tensor(np.sqrt(ds['intensity.sum.variance']), dtype=torch.float32)[:,None]
+        iobs  = torch.tensor(ds['intensity.sum.value'].to_numpy('float32'))
+        sigiobs  = torch.tensor(np.sqrt(ds['intensity.sum.variance'].to_numpy('float32')))
 
         metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
         self._tensor_data = {
@@ -185,4 +182,15 @@ class StillsDataset(AbismalDataset):
             "sigiobs" : sigiobs,
         }
 
+
+    def __len__(self) -> int:
+        """
+        Expensive, fallback implementation of __len__. If possible overload this to avoid
+        calling _load_tensor_data.
+        """
+        if self._length is None:
+            with open(self.expt_file) as f:
+                js = json.load(f)
+            self._length = len(js['experiment'])
+        return self._length
 
