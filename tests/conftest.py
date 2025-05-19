@@ -61,7 +61,7 @@ def refl_file():
     """
     Path to a dials stills reflection table
     """
-    datapath = ["..", "data", "dials.refl"]
+    datapath = [".", "data", "dials.refl"]
     file_name = abspath(join(dirname(__file__), *datapath))
     return file_name
 
@@ -70,7 +70,7 @@ def expt_file():
     """
     Path to a dials stills experiment list
     """
-    datapath = ["..", "data", "dials.expt"]
+    datapath = [".", "data", "dials.expt"]
     file_name = abspath(join(dirname(__file__), *datapath))
     return file_name
 

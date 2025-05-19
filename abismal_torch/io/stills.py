@@ -43,14 +43,6 @@ class StillsDataset(AbismalDataset):
         self.dmin = dmin
         self.expt_file = expt_file
         self.refl_file = refl_file
-        if len(expt_files) != len(refl_files):
-            raise ValueError("len(expt_files) is not the same as len(refl_files)")
-
-        # Try to be smart and use the inputs to infer the symmetry 
-        if self.cell is None:
-            self.cell = StillsDataset.get_average_cell(self.expt_file)
-        if self.spacegroup is None:
-            self.spacegroup = StillsDataset.get_space_group([self.expt_file])
 
     @staticmethod
     def _can_handle(input_files):
@@ -65,9 +57,8 @@ class StillsDataset(AbismalDataset):
 
     @refl_file.setter
     def refl_file(self, refl_file):
-        if refl_file != self._refl_file:
-            self._refl_file = refl_file
-            self.reset()
+        self._refl_file = refl_file
+        self.reset()
 
     @property
     def expt_file(self, expt_file):
@@ -75,19 +66,21 @@ class StillsDataset(AbismalDataset):
 
     @expt_file.setter
     def expt_file(self, expt_file):
-        self.elist = ExperimentListFactory.from_json_file(expt_file, check_format=False)
         self._expt_file = expt_file
         self.reset()
-        if self._cell is None:
-            self.get_average_cell(elist)
-        if self._space_group is None:
-            self.get_space_group(elist)
+        with open(expt_file) as f:
+            js = json.load(f)
+        self._length = len(js['experiment'])
+        if self.cell is None:
+            self.cell = self.get_average_cell(expt_file)
+        if self.spacegroup is None:
+            self.spacegroup = self.get_space_group(expt_file)
 
     @staticmethod
     def real_space_axes_to_cell_params(
         real_a : Sequence[float], 
         real_b : Sequence[float], 
-        real_c Sequence[float]
+        real_c : Sequence[float],
     ):
         a,b,c = map(np.linalg.norm, (real_a, real_b, real_c))
         alpha = rs.utils.angle_between(real_b, real_c)
@@ -105,10 +98,11 @@ class StillsDataset(AbismalDataset):
     @staticmethod
     def get_average_cell(expt_file : str) -> gemmi.UnitCell:
         import json
-        js = json.load(open(expt_file))
+        with open(expt_file) as f:
+            js = json.load(f)
         crystals = js['crystal']
         cells =  []
-        for i,exp in js['experiment']:
+        for i,exp in enumerate(js['experiment']):
             cid = exp['crystal']
             crystal = js['crystal'][cid]
             cells.append(
@@ -124,12 +118,13 @@ class StillsDataset(AbismalDataset):
     @staticmethod
     def get_space_group(expt_file : str, check_consistent=False) -> gemmi.SpaceGroup:
         import json
-        js = json.load(open(expt_file))
+        with open(expt_file) as f:
+            js = json.load(f)
 
         crystals = js['crystal']
         cells =  []
         sg = None
-        for i,exp in js['experiment']:
+        for i,exp in enumerate(js['experiment']):
             cid = exp['crystal']
             crystal = js['crystal'][cid]
             hall = crystal['space_group_hall_symbol']
@@ -146,40 +141,42 @@ class StillsDataset(AbismalDataset):
         return sg
 
     def _load_tensor_data(self):
-        ds = rs.io.read_dials_stills(self.refl_file)
-        js = json.load(open(self.expt_file))
+        ds = rs.io.read_dials_stills(
+            self.refl_file,
+            unitcell = self.cell,
+            spacegroup = self.spacegroup,
+        ).compute_dHKL().label_absences()
 
         #Compute wavelength sans experiment list
         ds['wavelength'] = np.reciprocal(np.linalg.norm(ds[['s1.0', 's1.1', 's1.2']], axis=-1))
         ds['wavelength'] = ds.groupby('BATCH')['wavelength'].transform('mean')
 
-        #Remove systematic absences 
-        present = ~self.spacegroup.operations().systematic_absences(table['miller_index'])
-        table = table.select(flex.bool(present))
+        #Remove systematic absences & and apply resolution cutoff
+        ds = ds[(~ds['ABSENT']) & (ds['dHKL'] >= self.dmin)]
 
-        #Trim to resolution range
-        #Update resolution for average cell
-        table['d'] = flex.double(self.cell.calculate_d_array(table['miller_index']))
-        table = table.select(table['d'] >= self.dmin)
+        batch = torch.tensor(ds['BATCH'].to_numpy(), dtype=torch.int32) 
+        rasu_id = self.rasu_id * torch.ones(len(ds), dtype=batch.dtype)
+        hkl = torch.tensor(ds[['H', 'K', 'L']].to_numpy('int32'))
+        d = torch.tensor(ds['dHKL'], dtype=torch.float32)[:,None]
+        wavelength = torch.tensor(ds['wavelength'], dtype=torch.float32)[:,None]
+        metadata_keys = [
+            'dHKL',
+            'delpsical.rad',
+            's1.0',
+            's1.1',
+            's1.2',
+            'xyzcal.px.0',
+            'xyzcal.px.1',
+            #'xyzcal.px.2',
+        ]
+        metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
+        iobs  = torch.tensor(ds['intensity.sum.value'], dtype=torch.float32)[:,None]
+        sigiobs  = torch.tensor(np.sqrt(ds['intensity.sum.variance']), dtype=torch.float32)[:,None]
 
-        iobs  = torch.tensor(table['intensity.sum.value'], dtype=torch.float32)[:,None]
-        sigiobs  = torch.tensor(np.sqrt(table['intensity.sum.variance']), dtype=torch.float32)[:,None]
-        hkl = torch.tensor(table['miller_index'], dtype=torch.int32)
-        batch = torch.tensor(table['id'], dtype=torch.int32) + self.batch_offsets[expt_file]
-
-        metadata = torch.concat((
-            torch.tensor(table['d'], dtype=torch.float32)[:,None]**-2.,
-            torch.tensor(table['delpsical.rad'], dtype=torch.float32)[:,None],
-            torch.tensor(table['s1'], dtype=torch.float32),
-            torch.tensor(table['xyzobs.mm.value'], dtype=torch.float32)[:,:2],
-            torch.tensor(table['xyzcal.mm'], dtype=torch.float32)[:,:2],
-        ), axis=-1)
-        d = torch.tensor(table['d'], dtype=torch.float32)[:,None]
-        wavelength = torch.tensor(table['wavelength'], dtype=torch.float32)[:,None]
-        rasu_id = self.rasu_id * torch.ones((self.max_nrefln_per_image,1), dtype=batch.dtype)
-
+        metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
         self._tensor_data = {
             "image_id" : batch,
+            "rasu_id" : rasu_id,
             "hkl_in" : hkl,
             "resolution" : d,
             "wavelength" : wavelength,
@@ -188,17 +185,4 @@ class StillsDataset(AbismalDataset):
             "sigiobs" : sigiobs,
         }
 
-    def __getitem__(self, idx):
-        if self._tensor_data is None:
-            self._load()
-
-        if idx in self._image_indices:
-            idx = self._image_indices[idx]
-        else:
-            idx = self._tensor_data['image_id'] == idx
-
-        return {k:v[idx] for k,v in self._refls_tensors.items()}
-
-    def __len__(self):
-        return len(self.elist)
 

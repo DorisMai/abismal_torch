@@ -79,6 +79,19 @@ class AbismalDataset(Dataset):
     def dmin(self):
         return self._dmin
 
+    @property
+    def spacegroup(self):
+        return self._spacegroup
+
+    @spacegroup.setter
+    def spacegroup(self, spacegroup):
+        self._spacegroup = spacegroup
+        self.reset()
+
+    @property
+    def dmin(self):
+        return self._dmin
+
     @dmin.setter
     def dmin(self, dmin):
         self._dmin = dmin
@@ -87,6 +100,7 @@ class AbismalDataset(Dataset):
     def reset(self):
         self._tensor_data = None
         self._image_data = {}
+        self._length = None
 
     def _load_tensor_data(self):
         """
@@ -104,9 +118,12 @@ class AbismalDataset(Dataset):
 
     def __len__(self) -> int:
         """
-        Expensive, fallback implementation of __len__. If possible overload this. 
+        Expensive, fallback implementation of __len__. If possible overload this to avoid
+        calling _load_tensor_data.
         """
-        return self.tensor_data['image_id'].max() + 1
+        if self._length is None:
+            self._length = self.tensor_data['image_id'].max() + 1
+        return self._length
 
     def __getitem__(self, idx):
         """
@@ -130,13 +147,15 @@ class AbismalDataset(Dataset):
         Returns:
             datum (dict): A dictionary with the following keys
         """
+        l = len(self)
+        if (idx > l -1)  | (idx < -l):
+            raise IndexError(f"Index {idx} out of range for AbismalDataset with length {l}")
         if idx in self._image_data:
             return self._image_data[idx]
 
         mask = self.tensor_data['image_id'] == idx
-        self._image_data[idx] = {k:v[mask] for k,v in self.tensor_data.items()}
+        self._image_data[idx] = {k:v[mask] for k,v in self._tensor_data.items()}
         mask = ~mask
-        self._tensor_data = {k:v[mask] for k,v in self.tensor_data.items()}
+        self._tensor_data = {k:v[mask] for k,v in self._tensor_data.items()}
         return self._image_data[idx]
-
 
