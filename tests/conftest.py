@@ -75,3 +75,19 @@ def expt_file():
     return file_name
 
 
+@pytest.fixture
+def num_dials_stills():
+    """
+    The number of still images in the dials test data (test/data/dials.{expt,refl})
+    """
+    return 3
+
+@pytest.fixture
+def mtz_file():
+    """
+    Path to an mtz file from dials.export
+    """
+    datapath = [".", "data", "dials.mtz"]
+    file_name = abspath(join(dirname(__file__), *datapath))
+    return file_name
+
