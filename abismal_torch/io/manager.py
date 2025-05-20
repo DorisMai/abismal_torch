@@ -4,6 +4,7 @@ import lightning as L
 import torch
 from torch.utils.data import ConcatDataset, DataLoader, random_split
 from reciprocalspaceship.decorators import cellify,spacegroupify
+import gemmi
 
 from abismal_torch.io.mtz import MTZDataset
 from abismal_torch.io.stills import StillsDataset
@@ -106,8 +107,9 @@ class IsomorphousDataModule(L.LightningDataModule):
         self.pin_memory = pin_memory
         self.persistent_workers = persistent_workers
 
+    @staticmethod
     def determine_handler_type(input_files: Union[str, Sequence[str]]) -> str:
-        for k,v in handler:
+        for k,v in IsomorphousDataModule.handlers.items():
             if v.can_handle(input_files):
                 return k
 

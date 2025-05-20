@@ -44,9 +44,9 @@ class AbismalDataset(Dataset):
 
     @classmethod
     def can_handle(cls, input_files: Union[Sequence, str]) -> bool:
-        if isinstance(files, str):
-            files = [files]
-        return cls._can_handle(files)
+        if isinstance(input_files, str):
+            input_files = [input_files]
+        return cls._can_handle(input_files)
 
     @property
     def rasu_id(self):
