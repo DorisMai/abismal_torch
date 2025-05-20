@@ -16,7 +16,7 @@ class AbismalDataset(Dataset):
     ):
         """
         Base class for all AbismalDatasets. This class should not be used directly. 
-        Sublclass this file to add new data types to abismal. 
+        Subclass this file to add new data types to abismal. 
 
         Apart from following the requirements of `torch.utils.data.Dataset`, subclasses must
         adhere to the following contract. 
