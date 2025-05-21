@@ -69,7 +69,7 @@ class MTZDataset(AbismalDataset):
         ds = rs.read_mtz(self.mtz_file)
 
         if self.cell is None:
-            self.cell = ds.cell.parameters
+            self.cell = ds.cell
         if self.spacegroup is None:
             self.spacegroup = ds.spacegroup.hm
         if self.wavelength is None:

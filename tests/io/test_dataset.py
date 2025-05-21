@@ -61,14 +61,14 @@ def test_dataset(file_type, num_dials_stills, rasu_id, get_dataset):
 @pytest.mark.parametrize('file_type', ['stills', 'mtz'])
 def test_stills_dataset_cell_assignment(file_type, num_dials_stills, get_dataset):
     def f(ds):
-        ds.cell = ds.cell
+        ds.cell = [34., 45., 98., 90., 90., 90.]
     ds = get_dataset(file_type)
     base_test_setters(f, ds, num_dials_stills)
 
 @pytest.mark.parametrize('file_type', ['stills', 'mtz'])
 def test_stills_dataset_spacegroup_assignment(file_type, num_dials_stills, get_dataset):
     def f(ds):
-        ds.spacegroup = ds.spacegroup
+        ds.spacegroup = 19
     ds = get_dataset(file_type)
     base_test_setters(f, ds, num_dials_stills)
 

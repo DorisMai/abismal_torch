@@ -194,3 +194,34 @@ class StillsDataset(AbismalDataset):
             self._length = len(js['experiment'])
         return self._length
 
+    @classmethod
+    def from_sequence(
+            cls, 
+            *input_files, 
+            dmin : List[float] | float = 0., 
+            wavelength : List[float] | float = 1.0,
+            rasu_id : List[int] | int = 0,
+            cell : List[gemmi.UnitCell] | gemmi.UnitCell = None,
+            spacegroup : List[gemmi.SpaceGroup] | gemmi.SpaceGroup = None,
+            **kwargs,
+        ) -> List[AbismalDataset]:
+        l = len(input_files)
+        kwargs.update({
+            'refl_file' : [f for f in input_files if f.endswith('.refl')],
+            'expt_file' : [f for f in input_files if f.endswith('.expt')],
+            'dmin' : dmin,
+            'wavelength' : wavelength,
+            'rasu_id' : rasu_id,
+            'cell' : cell,
+            'spacegroup' : spacegroup,
+        })
+        length = len(input_files)
+        for k,v in kwargs:
+            if (not isinstance(v, list)) or (not isinstance(v, tuple)):
+                v = [v] * length
+        result = []
+        for i in range(l):
+            result.append(cls({k : v[i] for k,v in kwargs.items()}))
+        return results
+
+

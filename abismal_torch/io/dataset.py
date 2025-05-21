@@ -1,11 +1,10 @@
 from typing import Optional,List,Sequence,Union
 from torch.utils.data import Dataset
 from reciprocalspaceship.decorators import cellify,spacegroupify
+import gemmi
 
 
 class AbismalDataset(Dataset):
-    @cellify
-    @spacegroupify
     def __init__(
         self,
         cell: Optional[List[float]] = None,
@@ -35,8 +34,32 @@ class AbismalDataset(Dataset):
         self.reset()
 
     @classmethod
-    def from_sequence(cls, input_files, *args, **kwargs):
-        return [cls(f, *args, **kwargs) for f in input_files]
+    def from_sequence(
+            cls, 
+            input_files, 
+            dmin : List[float] | float = 0., 
+            wavelength : List[float] | float = 1.0,
+            rasu_id : List[int] | int = 0,
+            cell : List[gemmi.UnitCell] | gemmi.UnitCell = None,
+            spacegroup : List[gemmi.SpaceGroup] | gemmi.SpaceGroup = None,
+            **kwargs,
+        ) -> List:
+        l = len(input_files)
+        kwargs.update({
+            'dmin' : dmin,
+            'wavelength' : wavelength,
+            'rasu_id' : rasu_id,
+            'cell' : cell,
+            'spacegroup' : spacegroup,
+        })
+        length = len(input_files)
+        for k,v in kwargs.items():
+            if (not isinstance(v, list)) or (not isinstance(v, tuple)):
+                kwargs[k] = [v] * length
+        result = []
+        for i,f in enumerate(input_files):
+            result.append(cls(f, **{k : v[i] for k,v in kwargs.items()}))
+        return result
 
     @staticmethod
     def _can_handle(input_files: Sequence) -> bool:
@@ -71,6 +94,7 @@ class AbismalDataset(Dataset):
         return self._cell
 
     @cell.setter
+    @cellify
     def cell(self, cell):
         self._cell = cell
         self.reset()
@@ -84,6 +108,7 @@ class AbismalDataset(Dataset):
         return self._spacegroup
 
     @spacegroup.setter
+    @spacegroupify
     def spacegroup(self, spacegroup):
         self._spacegroup = spacegroup
         self.reset()

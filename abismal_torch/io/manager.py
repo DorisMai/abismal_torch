@@ -3,8 +3,8 @@ from typing import List, Optional, Union, Sequence
 import lightning as L
 import torch
 from torch.utils.data import ConcatDataset, DataLoader, random_split
-from reciprocalspaceship.decorators import cellify,spacegroupify
 import gemmi
+import numpy as np
 
 from abismal_torch.io.mtz import MTZDataset
 from abismal_torch.io.stills import StillsDataset
@@ -32,13 +32,11 @@ def collate_fn(batch):
 
     return result
 
-class IsomorphousDataModule(L.LightningDataModule):
+class AbismalDataModule(L.LightningDataModule):
     handlers = {
         'mtz' : MTZDataset,
         'dials' : StillsDataset,
     }
-    @cellify
-    @spacegroupify
     def __init__(
         self,
         input_files: Union[str, Sequence[str]],
@@ -47,10 +45,10 @@ class IsomorphousDataModule(L.LightningDataModule):
         wavelength: Optional[float] = None,
         test_fraction: Optional[float] = 0.05,
         num_workers: Optional[int] = 0,
-        rasu_ids: Optional[Sequence[int]] = None,
+        rasu_ids: Optional[Sequence[int]] = 0,
         anomalous: Optional[bool] = False,
-        cell: Optional[Union[gemmi.UnitCell, Sequence[float]]] = None,
-        spacegroup: Optional[Union[gemmi.SpaceGroup, str, int]] = None,
+        cell: Optional[Union[gemmi.UnitCell, Sequence[gemmi.UnitCell]]] = None,
+        spacegroup: Optional[Union[gemmi.SpaceGroup, Sequence[gemmi.UnitCell]]] = None,
         pin_memory: Optional[bool] = False,
         persistent_workers: Optional[bool] = False,
         **handler_kwargs: Optional,
@@ -78,22 +76,27 @@ class IsomorphousDataModule(L.LightningDataModule):
         super().__init__()
         self.dmin = dmin
         self.anomalous = anomalous
+        self.rasu_ids = rasu_ids
 
         handler_type = self.determine_handler_type(input_files)
         handler = self.handlers[handler_type]
         datasets = handler.from_sequence(
-            input_files, dmin=dmin, wavelength=wavelength, rasu_id=rasu_id, 
+            input_files, dmin=dmin, wavelength=wavelength, rasu_id=rasu_ids, 
             cell=cell, spacegroup=spacegroup
         )
 
-        self.cell = np.zeros(6)
-        count = 0
-        for ds in datasets:
-            n = len(ds)
-            cell = np.array(ds.cell.parameters())
-            count += n
-        self.cell = self.cell / count
-        self.cell = gemmi.UnitCell(*cell)
+        if cell is None:
+            self.cell = np.zeros(6)
+            count = 0
+            for ds in datasets:
+                n = len(ds)
+                cell = np.array(ds.cell.parameters)
+                count += n
+            self.cell = self.cell / count
+            self.cell = gemmi.UnitCell(*cell)
+            self.cell = [self.cell] * len(datasets)
+            for ds in datasets:
+                ds.cell = self.cell
 
         self.spacegroup = datasets[0].spacegroup
         for ds in datasets:
@@ -109,7 +112,7 @@ class IsomorphousDataModule(L.LightningDataModule):
 
     @staticmethod
     def determine_handler_type(input_files: Union[str, Sequence[str]]) -> str:
-        for k,v in IsomorphousDataModule.handlers.items():
+        for k,v in AbismalDataModule.handlers.items():
             if v.can_handle(input_files):
                 return k
 
@@ -146,6 +149,9 @@ class IsomorphousDataModule(L.LightningDataModule):
             persistent_workers=self.persistent_workers,
         )
 
+    @property
+    def num_asus(self):
+        return len(np.unique(self.rasu_ids))
 
 #    def transfer_batch_to_device(self, batch, device, dataloader_idx):
 #        return {
