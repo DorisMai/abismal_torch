@@ -70,7 +70,7 @@ args_and_kwargs = (
             "Supply a comma-separated list of integers starting from 0. If not provided, each input\
             file will be assigned a unique RASU id. Merging output files are saved per RASU."
             'For example, --rasu-ids "0,1,0". ',
-            "default": None,
+            "default": 0,
             "type": list_of_ints,
         },
     ),
