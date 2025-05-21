@@ -5,4 +5,6 @@ from .standardization import (
     LazyWelfordStandardization,
     Standardization,
     WelfordStandardization,
+    LazyMovingStandardization,
+    MovingStandardization,
 )

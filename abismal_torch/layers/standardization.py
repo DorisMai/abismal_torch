@@ -192,7 +192,9 @@ class MovingStandardization(torch.nn.Module):
     ) -> None:
         """
         Standardization layer to track running mean and variance with exponential smoothing and
-        debiasing against zero initialization.
+        debiasing against zero initialization. See `_update_running_stats` for more details on
+        updating the running stats. Zero debiasing is (mostly) performed at the time of retrieving
+        properties like `mean` and `var` rather than during running stats updates.
 
         Args:
             num_features (int): Number of features in the input data.
@@ -200,7 +202,7 @@ class MovingStandardization(torch.nn.Module):
             center (bool, optional): If True, subtract the running mean from the input.
                 Default: True
             track_running_stats (bool, optional): Should always be True. Intended to be False
-                for LazyWelfordStandardization instances.
+                for LazyMovingStandardization instances.
             decay (float, optional): Decay rate for the exponential moving average, which is 
                 equivalent to `1 - momentum` in torch BatchNorm classes. Default: 0.999
 
@@ -215,6 +217,8 @@ class MovingStandardization(torch.nn.Module):
         self.center = center
         self.track_running_stats = track_running_stats
         self.decay = decay
+        self.num_features = num_features
+        self.zero_debias_correction = None
 
         if self.track_running_stats:
             self.register_buffer(
@@ -242,48 +246,47 @@ class MovingStandardization(torch.nn.Module):
 
     @property
     def mean(self):
-        return self.running_mean
+        """Debias against zero initialization"""
+        return self.running_mean / self.zero_debias_correction
 
     @property
     def var(self):
-        """unbiased variance"""
-        return (
-            self.running_var
-            * self.num_batches_tracked
-            / (self.num_batches_tracked - 1).clamp(min=1)
-        )
-
+        """Debias against zero initialization"""
+        return self.running_var / self.zero_debias_correction
+    
     @property
     def std(self):
         return torch.sqrt(self.var.clamp(min=self.eps))
 
-    def _update_running_stats(self, new_value: torch.Tensor):
+    def _update_running_stats(self, x: torch.Tensor):
         """
         Update the running mean and variance according to TensorFlow's moving_mean_variance_zero_debiased.
         Helpful references:
         https://www.tensorflow.org/probability/api_docs/python/tfp/stats/assign_moving_mean_variance
         https://github.com/tensorflow/probability/blob/v0.23.0/tensorflow_probability/python/stats/moving_stats.py
-        Specifically, the equations are:
+        Specifically, the equations are (in theory):
         ```
         new_mean = decay * old_mean + (1 - decay) * new_value
                  = old_mean + (1 - decay) * (new_value - old_mean)
         new_var = decay * old_var + (1 - decay) * (new_value - old_mean) * (new_value - new_mean)
                 = old_var + (1 - decay) * (decay * (new_value - old_mean)^2 - old_var)
         ```
-        Both mean and var are then divided by (1 - decay^zero_debias_count), where zero_debias_count is the 
-        number of updates since the zero initialization.
         """
-        delta = new_value - self.running_mean
+        delta = x.mean(dim=0) - self.running_mean
+        # Debiasing the old mean as tf does apparently helps early convergence
+        if self.num_batches_tracked > 1:
+            old_mean = self.mean
+        else:
+            old_mean = self.running_mean
+        # Make sure to get mean of the difference square rather than the square difference of the mean
+        delta_square = torch.square(x - old_mean).mean(dim=0)
         self.running_mean.add_((1 - self.decay) * delta)
-        zero_bias_correction = 1 - self.decay**self.num_batches_tracked
-        self.running_mean /= zero_bias_correction
-
-        self.running_var.add_((1 - self.decay) * (self.decay * delta**2 - self.running_var))
-        self.running_var /= zero_bias_correction
+        self.running_var.add_((1 - self.decay) * (self.decay * delta_square - self.running_var))
+        self.zero_debias_correction = 1 - self.decay**self.num_batches_tracked
 
     def standardize(self, x: torch.Tensor) -> torch.Tensor:
         if self.center:
-            return (x - self.running_mean) / self.std
+            return (x - self.mean) / self.std
         return x / self.std
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -291,8 +294,7 @@ class MovingStandardization(torch.nn.Module):
 
         if self.training and self.track_running_stats:
             self.num_batches_tracked.add_(1)
-            batch_mean = x.mean(dim=0)
-            self._update_running_stats(batch_mean)
+            self._update_running_stats(x)
         x = self.standardize(x)
         return x
 
