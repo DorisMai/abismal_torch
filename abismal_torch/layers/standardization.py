@@ -188,7 +188,7 @@ class MovingStandardization(torch.nn.Module):
         track_running_stats: Optional[bool] = True,
         decay: Optional[float] = 0.999,
         device=None,
-        dtype=None
+        dtype=None,
     ) -> None:
         """
         Standardization layer to track running mean and variance with exponential smoothing and
@@ -203,7 +203,7 @@ class MovingStandardization(torch.nn.Module):
                 Default: True
             track_running_stats (bool, optional): Should always be True. Intended to be False
                 for LazyMovingStandardization instances.
-            decay (float, optional): Decay rate for the exponential moving average, which is 
+            decay (float, optional): Decay rate for the exponential moving average, which is
                 equivalent to `1 - momentum` in torch BatchNorm classes. Default: 0.999
 
         Attributes:
@@ -253,7 +253,7 @@ class MovingStandardization(torch.nn.Module):
     def var(self):
         """Debias against zero initialization"""
         return self.running_var / self.zero_debias_correction
-    
+
     @property
     def std(self):
         return torch.sqrt(self.var.clamp(min=self.eps))
@@ -281,7 +281,9 @@ class MovingStandardization(torch.nn.Module):
         # Make sure to get mean of the difference square rather than the square difference of the mean
         delta_square = torch.square(x - old_mean).mean(dim=0)
         self.running_mean.add_((1 - self.decay) * delta)
-        self.running_var.add_((1 - self.decay) * (self.decay * delta_square - self.running_var))
+        self.running_var.add_(
+            (1 - self.decay) * (self.decay * delta_square - self.running_var)
+        )
         self.zero_debias_correction = 1 - self.decay**self.num_batches_tracked
 
     def standardize(self, x: torch.Tensor) -> torch.Tensor:
@@ -301,7 +303,7 @@ class MovingStandardization(torch.nn.Module):
     def _check_input_dim(self, input):
         if input.dim() != 2:
             raise ValueError(f"expected 2D input (got {input.dim()}D input)")
-        
+
     # =====================================================================================
     # The following functions are all copied over from torch.nn.modules.batchnorm._NormBase
     # with minimal modifications regarding variance initialization.
@@ -316,10 +318,10 @@ class MovingStandardization(torch.nn.Module):
 
     def reset_parameters(self) -> None:
         self.reset_running_stats()
-        
+
     def extra_repr(self):
         return (
-            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
+            "{num_features}, eps={epsilon}, decay={decay}, center={center}, "
             "track_running_stats={track_running_stats}".format(**self.__dict__)
         )
 
@@ -370,8 +372,15 @@ class LazyMovingStandardization(
 
     cls_to_become = MovingStandardization
 
-    def __init__(self, epsilon=1e-9, center=True, track_running_stats=True, 
-                 decay=0.999, device=None, dtype=None) -> None:
+    def __init__(
+        self,
+        epsilon=1e-9,
+        center=True,
+        track_running_stats=True,
+        decay=0.999,
+        device=None,
+        dtype=None,
+    ) -> None:
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__(
             # track_running_stats is hardcoded to False to avoid creating tensors that will
