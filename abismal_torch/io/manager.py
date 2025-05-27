@@ -46,7 +46,6 @@ class AbismalDataModule(L.LightningDataModule):
         test_fraction: Optional[float] = 0.05,
         num_workers: Optional[int] = 0,
         rasu_ids: Optional[Sequence[int]] = 0,
-        anomalous: Optional[bool] = False,
         cell: Optional[Union[gemmi.UnitCell, Sequence[gemmi.UnitCell]]] = None,
         spacegroup: Optional[Union[gemmi.SpaceGroup, Sequence[gemmi.UnitCell]]] = None,
         pin_memory: Optional[bool] = False,
@@ -54,7 +53,9 @@ class AbismalDataModule(L.LightningDataModule):
         **handler_kwargs: Optional,
     ):
         """
-        Load MTZ files using LightningDataModule.
+        Load files using LightningDataModule. This module supports various configurations for the
+        symmetry. The unit cells and/or spacegroups can be fully specified or inferred from the data.
+        If cell or spacegroup are not specificed, they will be inferred on a per-rasu basis. 
 
         Args:
             input_files (str or Sequence[str]): a path or a list of paths to the reflection files.
@@ -63,19 +64,16 @@ class AbismalDataModule(L.LightningDataModule):
             wavelength (float, optional): The wavelength for the data loader.
             test_fraction (float, optional): The fraction of the data to use for testing.
             num_workers (int, optional): The number of workers for Pytorch DataLoader.
-            rasu_ids (List[int], optional): List of RASU ids corresponding to each MTZ file. If supplied, make sure they are unique.
-                They will be renumberd from 0 to num_asus-1 according to the ascending order of the list if supplied, or according
-                to the order of the MTZ files if not supplied.
-            anomalous (bool, optional): Whether the data is anomalous.
-            cell (list[float], optional): a list of cell parameters. If provided, overrides the cell parameters in the MTZ file.
-            spacegroup (str, optional): a spacegroup symbol. If provided, overrides the spacegroup in the MTZ file.
+            rasu_ids (List[int], optional): List of RASU ids corresponding to each input file. 
+                These must be sequential. 
+            cell (gemmi.UnitCell or List[gemmi.UnitCell]): The unit cell or cells (one per rasu)
+            spacegroup (gemmi.SpaceGroup or List[gemmi.SpaceGroup]): The spacegroup or groups (one per rasu).
             pin_memory (bool, optional): Whether to pin memory.
             persistent_workers (bool, optional): Whether workers are persistent.
             **handler_keargs (optional): Additional keyword arguments to pass to the file handler
         """
         super().__init__()
         self.dmin = dmin
-        self.anomalous = anomalous
         self.rasu_ids = rasu_ids
 
         handler_type = self.determine_handler_type(input_files)
