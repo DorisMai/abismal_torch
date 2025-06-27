@@ -1,4 +1,5 @@
 import pytest
+from abismal_torch.io.dataset import AbismalConcatDataset
 
 def base_test_setters(setter_func, ds, length):
     assert ds._tensor_data is None
@@ -107,3 +108,27 @@ def test_stills_dataset_dmin_assignment(file_type, num_dials_stills, dmin, get_d
     for batch in ds:
         assert batch['resolution'].min() >= dmin
 
+@pytest.mark.parametrize('file_type', ['stills'])
+def test_concat_dataset(file_type, get_dataset):
+    ds = []
+    cells = [
+        [10., 20., 30., 90., 90., 90.],
+        [20., 30., 40., 90., 90., 90.],
+        [30., 40., 50., 90., 90., 90.],
+    ]
+    for i in range(3):
+        _ds = get_dataset(file_type)
+        _ds.cell = cells[i]
+        _ds.asu_id = 0
+        ds.append(
+            _ds
+        )
+    cds = AbismalConcatDataset(ds)
+    cell  = cds.cells[0].parameters
+
+    assert cell[0] == 20.
+    assert cell[1] == 30.
+    assert cell[2] == 40.
+    assert cell[3] == 90.
+    assert cell[4] == 90.
+    assert cell[5] == 90.

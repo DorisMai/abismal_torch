@@ -44,7 +44,7 @@ class AbismalDataModule(L.LightningDataModule):
         batch_size: Optional[int] = 1,
         wavelength: Optional[float] = None,
         test_fraction: Optional[float] = 0.05,
-        num_workers: Optional[int] = 0,
+        num_workers: Optional[int] = 1,
         rasu_ids: Optional[Sequence[int]] = 0,
         cell: Optional[Union[gemmi.UnitCell, Sequence[gemmi.UnitCell]]] = None,
         spacegroup: Optional[Union[gemmi.SpaceGroup, Sequence[gemmi.UnitCell]]] = None,
@@ -76,25 +76,19 @@ class AbismalDataModule(L.LightningDataModule):
         self.dmin = dmin
         self.rasu_ids = rasu_ids
 
-        handler_type = self.determine_handler_type(input_files)
-        handler = self.handlers[handler_type]
-        datasets = handler.from_sequence(
-            input_files, dmin=dmin, wavelength=wavelength, rasu_id=rasu_ids, 
-            cell=cell, spacegroup=spacegroup
-        )
-
+        self.cell = cell
         if cell is None:
-            self.cell = np.zeros(6)
-            count = 0
+            self.cell = [np.zeros(6)] * self.num_asus
+            count = [0] * self.num_asus
             for ds in datasets:
                 n = len(ds)
-                cell = np.array(ds.cell.parameters)
-                count += n
-            self.cell = self.cell / count
-            self.cell = gemmi.UnitCell(*cell)
-            self.cell = [self.cell] * len(datasets)
-            for ds in datasets:
-                ds.cell = self.cell
+                self.cell[ds.rasu_id] += n * np.array(ds.cell.parameters)
+                count[ds.rasu_id] += n
+            for i in range(self.num_asus):
+                self.cell[i] = self.cell[i] / count[i]
+            self.cell = [gemmi.UnitCell(*i) for i in self.cell]
+        elif isinstance(cell, gemmi.UnitCell):
+            self.cell = [cell] * self.num_asus
 
         self.spacegroup = datasets[0].spacegroup
         for ds in datasets:
@@ -110,9 +104,15 @@ class AbismalDataModule(L.LightningDataModule):
 
     @staticmethod
     def determine_handler_type(input_files: Union[str, Sequence[str]]) -> str:
+        handler_type = None
         for k,v in AbismalDataModule.handlers.items():
             if v.can_handle(input_files):
-                return k
+                if handler_type is None:
+                    handler_type = k
+                else:
+                    if handler_type != k:
+                        raise ValueError("Cannot determine a consistent input file type")
+        return handler_type
 
     def setup(self, stage: Optional[str] = None):
         # Random split based on images, not reflections

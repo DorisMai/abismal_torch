@@ -1,6 +1,7 @@
 from typing import Optional,List,Sequence,Union
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset,ConcatDataset
 from reciprocalspaceship.decorators import cellify,spacegroupify
+import numpy as np
 import gemmi
 
 
@@ -183,4 +184,48 @@ class AbismalDataset(Dataset):
         mask = ~mask
         self._tensor_data = {k:v[mask] for k,v in self._tensor_data.items()}
         return self._image_data[idx]
+
+class AbismalConcatDataset(ConcatDataset):
+    """
+    This is a subclass of torch.utils.data.ConcatDataset which is aware of the
+    symmetry of AbismalDatasets.
+    """
+    def __init__(self, datasets: List[Dataset]) -> None:
+        super().__init__(datasets)
+
+        cells = self.cells
+        spacegroups = self.spacegroups
+        for ds in self.datasets:
+            ds.cell = cells[ds.rasu_id]
+            ds.spacegroup = spacegroups[ds.rasu_id]
+
+    @property
+    def lengths(self):
+        lengths = {}
+        for ds in self.datasets:
+            if ds.rasu_id not in lengths:
+                lengths[ds.rasu_id] = 0
+            lengths[ds.rasu_id] += len(ds)
+        return lengths
+
+    @property
+    def cells(self):
+        cells = {}
+        lens = self.lengths
+        for ds in self.datasets:
+            if ds.rasu_id not in cells:
+                cells[ds.rasu_id] = np.zeros(6)
+            cells[ds.rasu_id] += len(ds) * np.array(ds.cell.parameters) / lens[ds.rasu_id]
+        cells = {k:gemmi.UnitCell(*v) for k,v in cells.items()}
+        return cells
+
+    @property
+    def spacegroups(self):
+        spacegroups = {}
+        for ds in self.datasets:
+            if ds.rasu_id in spacegroups:
+                assert spacegroups[ds.rasu_id] == ds.spacegroup
+            spacegroups[ds.rasu_id] = ds.spacegroup
+        return spacegroups
+
 
