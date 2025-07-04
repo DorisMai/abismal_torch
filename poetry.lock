@@ -3272,13 +3272,13 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "reciprocalspaceship"
-version = "1.0.4"
+version = "1.0.5"
 description = "Tools for exploring reciprocal space"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "reciprocalspaceship-1.0.4-py3-none-any.whl", hash = "sha256:4d7bc9f6871f527d42386f783b01fdfb5b8760b81d8366e01c1b84cd8c20a61d"},
-    {file = "reciprocalspaceship-1.0.4.tar.gz", hash = "sha256:5f5b00da2417d1aa0280a222c9dcea057bd6babf7bb53c5271d4821326652c9f"},
+    {file = "reciprocalspaceship-1.0.5-py3-none-any.whl", hash = "sha256:4855e235cb5d143127d2eb103c042e46a311e2da0c1ca967f9738ff5482c785e"},
+    {file = "reciprocalspaceship-1.0.5.tar.gz", hash = "sha256:2145a65a8f7cc7c16024ba91acbe9ecdb57d34474f83b7a80003425645d8739a"},
 ]
 
 [package.dependencies]
@@ -3288,9 +3288,11 @@ msgpack = "*"
 numpy = "*"
 pandas = ">=2.2.2,<=2.2.3"
 scipy = "*"
+setuptools = "*"
 
 [package.extras]
-dev = ["autodocsumm", "celluloid", "jupyter", "matplotlib", "nbsphinx", "pytest", "pytest-cov", "pytest-xdist", "ray", "scikit-image", "seaborn", "sphinx", "sphinx-design", "sphinx_rtd_theme", "sphinxcontrib-autoprogram", "tqdm"]
+dev = ["pytest", "pytest-cov", "pytest-xdist", "ray"]
+doc = ["autodocsumm", "celluloid", "jupyter", "matplotlib", "nbsphinx", "scikit-image", "seaborn", "sphinx", "sphinx-design", "sphinx_rtd_theme", "sphinxcontrib-autoprogram", "tqdm"]
 examples = ["celluloid", "jupyter", "matplotlib", "scikit-image", "seaborn", "tqdm"]
 
 [[package]]
