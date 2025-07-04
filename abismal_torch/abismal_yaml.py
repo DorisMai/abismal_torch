@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence, Mapping
 
 import gemmi
 import lightning as L
@@ -6,30 +6,22 @@ import torch
 from lightning.pytorch.utilities import grad_norm
 
 from abismal_torch.callbacks import MTZSaver
-from abismal_torch.io.manager import MTZDataModule
 from abismal_torch.merging import VariationalMergingModel
-from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
+from abismal_torch.io.manager import AbismalDataModule
+from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUCollection, ReciprocalASUGraph
 
 
 class AbismalLitModule(L.LightningModule):
     def __init__(
         self,
-        num_asus: int,
-        cell: Union[
-            gemmi.UnitCell,
-            Sequence[gemmi.UnitCell],
-            Sequence[float],
-            Sequence[Sequence[float]],
-        ],
-        spacegroup: Union[
-            gemmi.SpaceGroup, Sequence[gemmi.SpaceGroup], str, Sequence[str]
-        ],
-        dmin: float,
-        anomalous: bool,
+        cells: Sequence[gemmi.UnitCell] | Sequence[Sequence[float]] | Mapping[int, gemmi.UnitCell | Sequence[float]],
+        spacegroups: Sequence[gemmi.SpaceGroup] | Sequence[str] | Mapping[int, gemmi.SpaceGroup | str],
+        dmins: Sequence[float] | Mapping[int, float],
+        anomalouss: Sequence[bool] | Mapping[int, bool],
         scaling_model: torch.nn.Module,
         likelihood: torch.nn.Module,
-        prior_config: dict,
-        surrogate_posterior_config: dict,
+        prior_config: Mapping,
+        surrogate_posterior_config: Mapping,
         mc_samples: Optional[int] = 1,
         reindexing_ops: Optional[Sequence[str]] = None,
         kl_weight: Optional[float] = 1.0,
@@ -40,7 +32,7 @@ class AbismalLitModule(L.LightningModule):
             kl_weight (float, optional): KL divergence weight. Defaults to 1.0.
         """
         super().__init__()
-        self._rac = self._setup_rac(num_asus, cell, spacegroup, dmin, anomalous)
+        self._rac = self._setup_rac(num_asus, cells, spacegroups, dmins, anomalouss)
         self._prior = self._setup_prior(self._rac, prior_config)
         self._surrogate_posterior = self._setup_surrogate_posterior(
             self._rac, surrogate_posterior_config
@@ -59,34 +51,28 @@ class AbismalLitModule(L.LightningModule):
 
     def _setup_rac(
         self,
-        num_asus: int,
-        cell: Union[gemmi.UnitCell, Sequence[gemmi.UnitCell]],
-        spacegroup: Union[gemmi.SpaceGroup, Sequence[gemmi.SpaceGroup]],
-        dmin: float,
-        anomalous: bool,
+        cells: Mapping[int, gemmi.UnitCell | Sequence[float]] | Sequence[gemmi.UnitCell | Sequence[float]],
+        spacegroups: Mapping[int, gemmi.SpaceGroup | str] | Sequence[gemmi.SpaceGroup | str],
+        dmins: Mapping[int, float] | Sequence[float],
+        anomalouss: Mapping[int, bool] | Sequence[bool],
     ):
-        if isinstance(cell, Sequence):
-            assert len(cell) == num_asus
-        else:
-            cell = [cell] * num_asus
-        if isinstance(spacegroup, Sequence):
-            assert len(spacegroup) == num_asus
-        else:
-            spacegroup = [spacegroup] * num_asus
-
+        assert (
+            len(cells) == len(spacegroups) == len(dmins) == len(anomalouss)
+        ), "cells, spacegroups, dmins, and anomalouss must have the same length"
+        num_asus = len(anomalouss)
         rasus = []
         for rasu_id in range(num_asus):
             rasu = ReciprocalASU(
-                cell[rasu_id],
-                spacegroup[rasu_id],
-                dmin,
-                anomalous=anomalous,
+                cells[rasu_id],
+                spacegroups[rasu_id],
+                dmins[rasu_id],
+                anomalouss[rasu_id],
             )
             rasus.append(rasu)
         rac = ReciprocalASUGraph(*rasus)
         return rac
 
-    def _setup_prior(self, rac: ReciprocalASUGraph, prior_args: dict):
+    def _setup_prior(self, rac: ReciprocalASUCollection, prior_args: Mapping):
         # construct prior according to "class_path" and "kwargs" in prior_args
         module_path, class_name = prior_args["class_path"].rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
@@ -96,7 +82,7 @@ class AbismalLitModule(L.LightningModule):
         return prior
 
     def _setup_surrogate_posterior(
-        self, rac: ReciprocalASUGraph, surrogate_posterior_args: dict
+        self, rac: ReciprocalASUGraph, surrogate_posterior_args: Mapping
     ):
         module_path, class_name = surrogate_posterior_args["class_path"].rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
@@ -186,13 +172,10 @@ from lightning.pytorch.cli import LightningCLI
 
 class MyCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
-        parser.link_arguments("data.dmin", "model.dmin")
-        parser.link_arguments("data.anomalous", "model.anomalous")
-        parser.link_arguments("data.num_asus", "model.num_asus", apply_on="instantiate")
-        parser.link_arguments("data.cell", "model.cell", apply_on="instantiate")
-        parser.link_arguments(
-            "data.spacegroup", "model.spacegroup", apply_on="instantiate"
-        )
+        parser.link_arguments("data.anomalouss", "model.anomalouss", apply_on="instantiate")
+        parser.link_arguments("data.dmins", "model.dmins", apply_on="instantiate")
+        parser.link_arguments("data.cells", "model.cells", apply_on="instantiate")
+        parser.link_arguments("data.spacegroups", "model.spacegroups", apply_on="instantiate")
         parser.link_arguments(
             "trainer.default_root_dir", "trainer.logger.init_args.save_dir"
         )
@@ -232,7 +215,7 @@ def main():
     # Instantiation only mode
     cli = MyCLI(
         AbismalLitModule,
-        MTZDataModule,
+        AbismalDataModule,
         run=False,
         parser_kwargs={
             "default_config_files": [

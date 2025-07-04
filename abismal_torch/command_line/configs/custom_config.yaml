@@ -17,7 +17,23 @@ trainer:
 
 
 data:
-  persistent_workers: true
+  rasu_configs:
+    - rasu_id: 0
+      dmin: 1.5
+      input_files: /Users/mai12345/Desktop/unmerged.mtz
+    - rasu_id: 1
+      dmin: 2.0
+      input_files: 
+        - tests/data/dials.mtz
+        - tests/data/dials.expt
+        - tests/data/dials.refl
+      cell: [10, 20, 30, 90.0, 90.0, 90.0]
+      spacegroup: "P212121"
+      anomalous: true
+  handler_kwargs:
+    intensity_key: "IPR"
+    sigma_key: "SIGIPR"
+
 
 seed_everything: 42
 mtz_output:

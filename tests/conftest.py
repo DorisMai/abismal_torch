@@ -3,6 +3,7 @@ import pytest
 import torch
 
 from abismal_torch.symmetry import ReciprocalASU, ReciprocalASUGraph
+from os.path import abspath, dirname, join
 
 
 @pytest.fixture
@@ -54,3 +55,62 @@ def custom_scaling_model_params():
         "hidden_units": 15,
         "activation": None,
     }
+
+@pytest.fixture
+def refl_file():
+    """
+    Path to a dials stills reflection table
+    """
+    datapath = [".", "data", "dials.refl"]
+    file_name = abspath(join(dirname(__file__), *datapath))
+    return file_name
+
+@pytest.fixture
+def expt_file():
+    """
+    Path to a dials stills experiment list
+    """
+    datapath = [".", "data", "dials.expt"]
+    file_name = abspath(join(dirname(__file__), *datapath))
+    return file_name
+
+
+@pytest.fixture
+def num_dials_stills():
+    """
+    The number of still images in the dials test data (test/data/dials.{expt,refl})
+    """
+    return 3
+
+@pytest.fixture
+def mtz_file():
+    """
+    Path to an mtz file from dials.export
+    """
+    datapath = [".", "data", "dials.mtz"]
+    file_name = abspath(join(dirname(__file__), *datapath))
+    return file_name
+
+@pytest.fixture
+def data_files():
+    """
+    Return a dictionary of different input files for datasets
+    """
+    return {
+        'mtz' : mtz_file(),
+        'stills' : (expt_file(), refl_file()),
+    }
+
+@pytest.fixture
+def get_dataset(expt_file, refl_file, mtz_file):
+    def f(file_type, **kwargs):
+        if file_type == 'stills':
+            from abismal_torch.io.stills import StillsDataset
+            return StillsDataset(expt_file, refl_file, **kwargs)
+        if file_type == 'mtz':
+            from abismal_torch.io.mtz import MTZDataset
+            return MTZDataset(mtz_file, **kwargs)
+        else:
+            raise ValueError(f"Unknown file_type, {file_type}.")
+    return f
+

@@ -1,0 +1,509 @@
+{
+  "__id__": "ExperimentList",
+  "experiment": [
+    {
+      "__id__": "Experiment",
+      "identifier": "8c479ffc-8699-58d5-08c6-2f275b886996",
+      "beam": 0,
+      "detector": 0,
+      "crystal": 0,
+      "imageset": 0
+    },
+    {
+      "__id__": "Experiment",
+      "identifier": "48eea001-c4df-6817-ff13-60692e55ffe2",
+      "beam": 1,
+      "detector": 1,
+      "crystal": 1,
+      "imageset": 1
+    },
+    {
+      "__id__": "Experiment",
+      "identifier": "852df429-6e62-8082-48c5-1b855a7366e7",
+      "beam": 2,
+      "detector": 2,
+      "crystal": 2,
+      "imageset": 2
+    }
+  ],
+  "imageset": [
+    {
+      "__id__": "ImageSet",
+      "images": [
+        "/sdf/data/lcls/ds/mfx/mfxl1008021/results/common/results/r0022/002_rg015/data.loc"
+      ],
+      "single_file_indices": [
+        306
+      ],
+      "mask": null,
+      "gain": null,
+      "pedestal": null,
+      "dx": null,
+      "dy": null,
+      "params": {}
+    },
+    {
+      "__id__": "ImageSet",
+      "images": [
+        "/sdf/data/lcls/ds/mfx/mfxl1008021/results/common/results/r0022/002_rg015/data.loc"
+      ],
+      "single_file_indices": [
+        7416
+      ],
+      "mask": null,
+      "gain": null,
+      "pedestal": null,
+      "dx": null,
+      "dy": null,
+      "params": {}
+    },
+    {
+      "__id__": "ImageSet",
+      "images": [
+        "/sdf/data/lcls/ds/mfx/mfxl1008021/results/common/results/r0022/002_rg015/data.loc"
+      ],
+      "single_file_indices": [
+        4697
+      ],
+      "mask": null,
+      "gain": null,
+      "pedestal": null,
+      "dx": null,
+      "dy": null,
+      "params": {}
+    }
+  ],
+  "beam": [
+    {
+      "__id__": "monochromatic",
+      "direction": [
+        -0.0,
+        -0.0,
+        1.0
+      ],
+      "wavelength": 1.0255191413773161,
+      "divergence": 0.0,
+      "sigma_divergence": 0.0,
+      "polarization_normal": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "polarization_fraction": 0.999,
+      "flux": 0.0,
+      "transmission": 1.0,
+      "probe": "x-ray",
+      "sample_to_source_distance": 0.0
+    },
+    {
+      "__id__": "monochromatic",
+      "direction": [
+        -0.0,
+        -0.0,
+        1.0
+      ],
+      "wavelength": 1.0267625324110614,
+      "divergence": 0.0,
+      "sigma_divergence": 0.0,
+      "polarization_normal": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "polarization_fraction": 0.999,
+      "flux": 0.0,
+      "transmission": 1.0,
+      "probe": "x-ray",
+      "sample_to_source_distance": 0.0
+    },
+    {
+      "__id__": "monochromatic",
+      "direction": [
+        -0.0,
+        -0.0,
+        1.0
+      ],
+      "wavelength": 1.0274227178944104,
+      "divergence": 0.0,
+      "sigma_divergence": 0.0,
+      "polarization_normal": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "polarization_fraction": 0.999,
+      "flux": 0.0,
+      "transmission": 1.0,
+      "probe": "x-ray",
+      "sample_to_source_distance": 0.0
+    }
+  ],
+  "detector": [
+    {
+      "panels": [
+        {
+          "name": "Panel",
+          "type": "SENSOR_UNKNOWN",
+          "fast_axis": [
+            0.9999995581301083,
+            1.8182059730232148e-06,
+            -0.0009400724877249151
+          ],
+          "slow_axis": [
+            -1.1204742663045525e-06,
+            -0.9999951140352573,
+            -0.0031260045357199757
+          ],
+          "origin": [
+            -170.5613281660345,
+            169.8770392454798,
+            -136.61999688962115
+          ],
+          "raw_image_offset": [
+            0,
+            0
+          ],
+          "image_size": [
+            1920,
+            1920
+          ],
+          "pixel_size": [
+            0.17708333333333334,
+            0.17708333333333334
+          ],
+          "trusted_range": [
+            0.0,
+            65534.0
+          ],
+          "thickness": 0.0,
+          "material": "",
+          "mu": 0.0,
+          "identifier": "",
+          "mask": [],
+          "gain": 1.0,
+          "pedestal": 0.0,
+          "px_mm_strategy": {
+            "type": "SimplePxMmStrategy"
+          }
+        }
+      ],
+      "hierarchy": {
+        "name": "",
+        "type": "",
+        "fast_axis": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "slow_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "origin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_image_offset": [
+          0,
+          0
+        ],
+        "image_size": [
+          0,
+          0
+        ],
+        "pixel_size": [
+          0.0,
+          0.0
+        ],
+        "trusted_range": [
+          0.0,
+          0.0
+        ],
+        "thickness": 0.0,
+        "material": "",
+        "mu": 0.0,
+        "identifier": "",
+        "mask": [],
+        "gain": 1.0,
+        "pedestal": 0.0,
+        "px_mm_strategy": {
+          "type": "SimplePxMmStrategy"
+        },
+        "children": [
+          {
+            "panel": 0
+          }
+        ]
+      }
+    },
+    {
+      "panels": [
+        {
+          "name": "Panel",
+          "type": "SENSOR_UNKNOWN",
+          "fast_axis": [
+            0.9999995581301083,
+            1.8182059730232148e-06,
+            -0.0009400724877249151
+          ],
+          "slow_axis": [
+            -1.1204742663045525e-06,
+            -0.9999951140352573,
+            -0.0031260045357199757
+          ],
+          "origin": [
+            -170.5613281660345,
+            169.8770392454798,
+            -136.61999688962115
+          ],
+          "raw_image_offset": [
+            0,
+            0
+          ],
+          "image_size": [
+            1920,
+            1920
+          ],
+          "pixel_size": [
+            0.17708333333333334,
+            0.17708333333333334
+          ],
+          "trusted_range": [
+            0.0,
+            65534.0
+          ],
+          "thickness": 0.0,
+          "material": "",
+          "mu": 0.0,
+          "identifier": "",
+          "mask": [],
+          "gain": 1.0,
+          "pedestal": 0.0,
+          "px_mm_strategy": {
+            "type": "SimplePxMmStrategy"
+          }
+        }
+      ],
+      "hierarchy": {
+        "name": "",
+        "type": "",
+        "fast_axis": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "slow_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "origin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_image_offset": [
+          0,
+          0
+        ],
+        "image_size": [
+          0,
+          0
+        ],
+        "pixel_size": [
+          0.0,
+          0.0
+        ],
+        "trusted_range": [
+          0.0,
+          0.0
+        ],
+        "thickness": 0.0,
+        "material": "",
+        "mu": 0.0,
+        "identifier": "",
+        "mask": [],
+        "gain": 1.0,
+        "pedestal": 0.0,
+        "px_mm_strategy": {
+          "type": "SimplePxMmStrategy"
+        },
+        "children": [
+          {
+            "panel": 0
+          }
+        ]
+      }
+    },
+    {
+      "panels": [
+        {
+          "name": "Panel",
+          "type": "SENSOR_UNKNOWN",
+          "fast_axis": [
+            0.9999995581301083,
+            1.8182059730232148e-06,
+            -0.0009400724877249151
+          ],
+          "slow_axis": [
+            -1.1204742663045525e-06,
+            -0.9999951140352573,
+            -0.0031260045357199757
+          ],
+          "origin": [
+            -170.5613281660345,
+            169.8770392454798,
+            -136.61999688962115
+          ],
+          "raw_image_offset": [
+            0,
+            0
+          ],
+          "image_size": [
+            1920,
+            1920
+          ],
+          "pixel_size": [
+            0.17708333333333334,
+            0.17708333333333334
+          ],
+          "trusted_range": [
+            0.0,
+            65534.0
+          ],
+          "thickness": 0.0,
+          "material": "",
+          "mu": 0.0,
+          "identifier": "",
+          "mask": [],
+          "gain": 1.0,
+          "pedestal": 0.0,
+          "px_mm_strategy": {
+            "type": "SimplePxMmStrategy"
+          }
+        }
+      ],
+      "hierarchy": {
+        "name": "",
+        "type": "",
+        "fast_axis": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "slow_axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "origin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw_image_offset": [
+          0,
+          0
+        ],
+        "image_size": [
+          0,
+          0
+        ],
+        "pixel_size": [
+          0.0,
+          0.0
+        ],
+        "trusted_range": [
+          0.0,
+          0.0
+        ],
+        "thickness": 0.0,
+        "material": "",
+        "mu": 0.0,
+        "identifier": "",
+        "mask": [],
+        "gain": 1.0,
+        "pedestal": 0.0,
+        "px_mm_strategy": {
+          "type": "SimplePxMmStrategy"
+        },
+        "children": [
+          {
+            "panel": 0
+          }
+        ]
+      }
+    }
+  ],
+  "goniometer": [],
+  "scan": [],
+  "crystal": [
+    {
+      "__id__": "crystal",
+      "real_space_a": [
+        43.01838213816389,
+        5.951913309591944,
+        20.608669632648642
+      ],
+      "real_space_b": [
+        -40.13109789852346,
+        34.66792621273786,
+        73.75703724092573
+      ],
+      "real_space_c": [
+        -5.983021370269312,
+        -86.87813223308562,
+        37.579864445529466
+      ],
+      "space_group_hall_symbol": " P 2ac 2ab",
+      "ML_half_mosaicity_deg": 0.03924301648724804,
+      "ML_domain_size_ang": 16922.39954397519
+    },
+    {
+      "__id__": "crystal",
+      "real_space_a": [
+        -17.601704737076968,
+        44.438945975035324,
+        -4.795538769627431
+      ],
+      "real_space_b": [
+        27.032062679501177,
+        1.3584545433244188,
+        -86.63095381265738
+      ],
+      "real_space_c": [
+        -83.5405309160078,
+        -35.963251339704314,
+        -26.63167388373346
+      ],
+      "space_group_hall_symbol": " P 2ac 2ab",
+      "ML_half_mosaicity_deg": 0.10183347535704036,
+      "ML_domain_size_ang": 29587.89815687866
+    },
+    {
+      "__id__": "crystal",
+      "real_space_a": [
+        40.694157569584284,
+        -21.991857109752342,
+        13.09716256395228
+      ],
+      "real_space_b": [
+        -14.930549207551138,
+        -64.64451583981658,
+        -62.155969222405005
+      ],
+      "real_space_c": [
+        48.01731648378017,
+        50.625836543850326,
+        -64.18703865212069
+      ],
+      "space_group_hall_symbol": " P 2ac 2ab",
+      "ML_half_mosaicity_deg": 0.0037449104869624393,
+      "ML_domain_size_ang": 6188.416346075296
+    }
+  ],
+  "profile": [],
+  "scaling_model": []
+}
