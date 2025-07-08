@@ -46,7 +46,7 @@ class AbismalDataModule(L.LightningDataModule):
         num_workers: Optional[int] = 1,
         pin_memory: Optional[bool] = False,
         persistent_workers: Optional[bool] = False,
-        handler_kwargs: Optional[Mapping] = None,
+        handler_kwargs: Optional[Mapping] = {},
     ):
         """
         Load files using LightningDataModule. This module supports various configurations for the
@@ -88,15 +88,17 @@ class AbismalDataModule(L.LightningDataModule):
             # parse the input files
             input_files = rasu_config.pop('input_files')
             if isinstance(input_files, str):input_files = [input_files]
-            dials_files = []
+
+            # make a dict of input_files to handler
+            input_dict = {}
             for input_file in input_files:
                 handler_type = self.determine_handler_type(input_file)
-                if handler_type == 'dials':
-                    dials_files.append(input_file)
-                else:
-                    self.datasets.append(AbismalDataModule.handlers[handler_type](input_file, **rasu_config, **handler_kwargs))            
-            if dials_files:
-                self.datasets.extend(StillsDataset.from_sequence(dials_files, **rasu_config, **handler_kwargs))
+                if handler_type not in input_dict:
+                    input_dict[handler_type] = []
+                input_dict[handler_type].append(input_file)
+                
+            for k, v in input_dict.items():
+                self.datasets.extend(AbismalDataModule.handlers[k].from_sequence(v, **rasu_config, **handler_kwargs))
 
         assert len(self.anomalouss) == max(self.anomalouss.keys()) + 1, f"rasu_ids must form contiguous sequence starting from 0."
         self.dataset = AbismalConcatDataset(self.datasets)

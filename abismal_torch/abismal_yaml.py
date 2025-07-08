@@ -32,7 +32,7 @@ class AbismalLitModule(L.LightningModule):
             kl_weight (float, optional): KL divergence weight. Defaults to 1.0.
         """
         super().__init__()
-        self._rac = self._setup_rac(num_asus, cells, spacegroups, dmins, anomalouss)
+        self._rac = self._setup_rac(cells, spacegroups, dmins, anomalouss)
         self._prior = self._setup_prior(self._rac, prior_config)
         self._surrogate_posterior = self._setup_surrogate_posterior(
             self._rac, surrogate_posterior_config

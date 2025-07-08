@@ -109,8 +109,8 @@ class StillsDataset(AbismalDataset):
                     crystal['real_space_c'],
                 )
             )
-        cell = np.array(cells).mean(0)
-        return cell
+        cell_params = np.array(cells).mean(0)
+        return gemmi.UnitCell(*cell_params)
 
     @staticmethod
     def get_space_group(expt_file : str, check_consistent=False) -> gemmi.SpaceGroup:
@@ -203,7 +203,7 @@ class StillsDataset(AbismalDataset):
             spacegroup : List[gemmi.SpaceGroup] | gemmi.SpaceGroup = None,
             **kwargs,
         ) -> List[AbismalDataset]:
-        l = len(input_files)
+
         kwargs.update({
             'refl_file' : [f for f in input_files if f.endswith('.refl')],
             'expt_file' : [f for f in input_files if f.endswith('.expt')],
@@ -213,14 +213,19 @@ class StillsDataset(AbismalDataset):
             'cell' : cell,
             'spacegroup' : spacegroup,
         })
-        length = len(input_files)
+        if len(kwargs['refl_file']) != len(kwargs['expt_file']): 
+            raise ValueError("Number of refl_files and expt_files must be the same")
+        length = len(kwargs['refl_file'])
         for k,v in kwargs.items():
-            if (not isinstance(v, list)) or (not isinstance(v, tuple)):
-                v = [v] * length
-        from IPython import embed; embed(colors='linux')
+            expand = True
+            expand &= (not isinstance(v, list)) and (not isinstance(v, tuple))
+            expand |= k == 'cell' 
+            if expand:
+                kwargs[k] = [v] * length
+
         result = []
-        for i in range(l):
-            result.append(cls({k : v[i] for k,v in kwargs.items()}))
+        for i in range(length):
+            result.append(cls(**{k : v[i] for k,v in kwargs.items()}))
         return result
 
 
