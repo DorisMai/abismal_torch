@@ -1,14 +1,12 @@
-from typing import Optional, Sequence, Mapping
+from typing import List, Optional, Union
 
 import lightning as L
 import torch
-from torch.utils.data import DataLoader, random_split
-import gemmi
+from torch.utils.data import ConcatDataset, DataLoader, random_split
 
 from abismal_torch.io.mtz import MTZDataset
-from abismal_torch.io.stills import StillsDataset
-from abismal_torch.io.dataset import AbismalConcatDataset
-        
+
+
 def collate_fn(batch):
     """
     Custom collate function to handle batches of image reflections.
@@ -32,114 +30,82 @@ def collate_fn(batch):
 
     return result
 
-class AbismalDataModule(L.LightningDataModule):
-    handlers = {
-        'mtz' : MTZDataset,
-        'dials' : StillsDataset,
-    }
+
+class MTZDataModule(L.LightningDataModule):
     def __init__(
         self,
-        rasu_configs: Mapping | Sequence[Mapping],
+        mtz_files: Union[str, List[str]],
+        dmin: float,
         batch_size: Optional[int] = 1,
-        validation_fraction: Optional[float] = 0.05,
+        wavelength: Optional[float] = None,
         test_fraction: Optional[float] = 0.05,
-        num_workers: Optional[int] = 1,
+        num_workers: Optional[int] = 0,
+        rasu_ids: Optional[List[int]|int] = 0,
+        anomalous: Optional[bool] = False,
+        cell: Optional[List[float]] = None,
+        spacegroup: Optional[str] = None,
         pin_memory: Optional[bool] = False,
         persistent_workers: Optional[bool] = False,
-        handler_kwargs: Optional[Mapping] = {},
     ):
         """
-        Load files using LightningDataModule. This module supports various configurations for the
-        symmetry. The unit cells and/or spacegroups can be fully specified or inferred from the data.
-        If cell or spacegroup are not specificed, they will be inferred on a per-rasu basis. 
+        Load MTZ files using LightningDataModule.
 
         Args:
-            rasu_configs (dict): A dictionary or list of dictionaries of configuration for each rasu. 
-                Configuration keys are:
-                    - rasu_id (int): The RASU id corresponding to the input files, must be 0 indexed.
-                    - input_files (str or Sequence[str]): a path or a list of paths to the reflection files.
-                    - dmin (float, optional): The highest resolution limit. Defaults to 0.
-                    - wavelength (float, optional): The wavelength for the data loader. If not provided, will
-                        be inferred from the data or default to 1.0.
-                    - anomalous (bool, optional): Whether the data is anomalous. Defaults to False.
-                    - cell (gemmi.UnitCell or List[float]): The unit cell constants. If not provided, will be
-                        inferred from the data as weighted average of images.
-                    - spacegroup (gemmi.SpaceGroup or str]): The spacegroups. If not provided, will be inferred
-                        from the data.
+            mtz_files (str or list[str]): a path or a list of paths to the MTZ files.
+            dmin (float): The highest resolution limit.
             batch_size (int, optional): The batch size for the data loader (number of images per batch).
+            wavelength (float, optional): The wavelength for the data loader.
             test_fraction (float, optional): The fraction of the data to use for testing.
             num_workers (int, optional): The number of workers for Pytorch DataLoader.
-            pin_memory (bool, optional): Whether to pin memory.
-            persistent_workers (bool, optional): Whether workers are persistent.
-            **handler_keargs (optional): Additional keyword arguments to pass to the file handler
+            rasu_ids (List[int], optional): List of RASU ids corresponding to each MTZ file. If supplied, make sure they are unique.
+                They will be renumberd from 0 to num_asus-1 according to the ascending order of the list if supplied, or according
+                to the order of the MTZ files if not supplied.
+            anomalous (bool, optional): Whether the data is anomalous.
+            cell (list[float], optional): a list of cell parameters. If provided, overrides the cell parameters in the MTZ file.
+            spacegroup (str, optional): a spacegroup symbol. If provided, overrides the spacegroup in the MTZ file.
         """
         super().__init__()
-        if isinstance(rasu_configs, dict):
-            rasu_configs = [rasu_configs]
-        self.anomalouss = {}
-        self.datasets = []
-        for rasu_config in rasu_configs:
-            # get the anomalous flag for rasu
-            rasu_id = rasu_config.get('rasu_id', 0)
-            anomalous = rasu_config.get('anomalous', False)
-            if rasu_id in self.anomalouss:
-                assert self.anomalouss[rasu_id] == anomalous, f"Inconsistent anomalous flags for rasu_id {rasu_id}"
-            self.anomalouss[rasu_id] = anomalous
-            # parse the input files
-            input_files = rasu_config.pop('input_files')
-            if isinstance(input_files, str):input_files = [input_files]
+        self.dmin = dmin
+        self.anomalous = anomalous
+        if isinstance(mtz_files, str):
+            mtz_files = [mtz_files]
 
-            # make a dict of input_files to handler
-            input_dict = {}
-            for input_file in input_files:
-                handler_type = self.determine_handler_type(input_file)
-                if handler_type not in input_dict:
-                    input_dict[handler_type] = []
-                input_dict[handler_type].append(input_file)
-                
-            for k, v in input_dict.items():
-                self.datasets.extend(AbismalDataModule.handlers[k].from_sequence(v, **rasu_config, **handler_kwargs))
-
-        assert len(self.anomalouss) == max(self.anomalouss.keys()) + 1, f"rasu_ids must form contiguous sequence starting from 0."
-        self.dataset = AbismalConcatDataset(self.datasets)
+        self.num_asus = len(mtz_files)
+        datasets = []
+        # if rasu_ids is None:
+        #     rasu_ids = list(range(self.num_asus))
+        if rasu_ids is not None:
+            if isinstance(rasu_ids, int):
+                rasu_ids = [rasu_ids] * self.num_asus
+            mtz_files = [x for _, x in sorted(zip(rasu_ids, mtz_files))]
+            rasu_ids = list(range(self.num_asus))
+        for mtz_file, rasu_id in zip(mtz_files, rasu_ids):
+            dataset = MTZDataset(
+                mtz_file,
+                dmin=dmin,
+                wavelength=wavelength,
+                rasu_id=rasu_id,
+                cell=cell,
+                spacegroup=spacegroup,
+            )
+            datasets.append(dataset)
+        self.cell = [dataset.cell for dataset in datasets]
+        self.spacegroup = [dataset.spacegroup for dataset in datasets]
+        self.dataset = ConcatDataset(datasets)
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.validation_fraction = validation_fraction
         self.test_fraction = test_fraction
         self.pin_memory = pin_memory
         self.persistent_workers = persistent_workers
 
-    @property
-    def dmins(self):
-        return self.dataset.dmins
-    
-    @property
-    def cells(self):
-        return self.dataset.cells
-    
-    @property
-    def spacegroups(self):
-        return self.dataset.spacegroups
-
-    @staticmethod
-    def determine_handler_type(input_files: str) -> str:
-        """
-        Determine the handler types for the input files. Supports a mixture of file types.
-        """
-        for k, v in AbismalDataModule.handlers.items():
-            if v.can_handle([input_files]):
-                return k
-        raise ValueError(f"Cannot determine the parser to handle the file: {input_files}")
-
     def setup(self, stage: Optional[str] = None):
         # Random split based on images, not reflections
         total_len = len(self.dataset)
-        val_size = int(total_len * self.validation_fraction)
-        test_size = int(total_len * self.test_fraction)
-        train_size = total_len - val_size - test_size
-        self.train_dataset, self.val_dataset, self.test_dataset = random_split(
+        val_size = int(total_len * self.test_fraction)
+        train_size = total_len - val_size
+        self.train_dataset, self.val_dataset = random_split(
             self.dataset,
-            [train_size, val_size, test_size],
+            [train_size, val_size],
             generator=torch.Generator(),
         )
 
@@ -165,15 +131,6 @@ class AbismalDataModule(L.LightningDataModule):
             persistent_workers=self.persistent_workers,
         )
 
-    def test_dataloader(self):
-        return DataLoader(
-            self.test_dataset,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            collate_fn=collate_fn,
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers,
-        )
 
 #    def transfer_batch_to_device(self, batch, device, dataloader_idx):
 #        return {

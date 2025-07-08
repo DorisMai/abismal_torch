@@ -16,24 +16,24 @@ trainer:
     #   init_args:
     #     save_every_n_epoch: 2
 
-# # Single MTZ file
-# data:
-#   rasu_configs:
-#     - rasu_id: 0
-#       dmin: 1.5
-#       input_files: /Users/mai12345/Desktop/unmerged.mtz
-
-# Single ASU Dials file
+# Single MTZ file
 data:
   rasu_configs:
     - rasu_id: 0
-      dmin: 2.0
-      input_files: 
-        - tests/data/dials.expt
-        - tests/data/dials.refl
-      cell: [10, 20, 30, 90.0, 90.0, 90.0]
-      spacegroup: "P212121"
-      anomalous: true
+      dmin: 1.5
+      input_files: /Users/mai12345/Desktop/unmerged.mtz
+
+# # Single ASU Dials file
+# data:
+#   rasu_configs:
+#     - rasu_id: 0
+#       dmin: 2.0
+#       input_files: 
+#         - tests/data/dials.expt
+#         - tests/data/dials.refl
+#       cell: [10, 20, 30, 90.0, 90.0, 90.0]
+#       spacegroup: "P212121"
+#       anomalous: true
 
 # # Multiple ASUs + Different file types across ASUs
 # data:
