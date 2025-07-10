@@ -10,6 +10,17 @@ import json
 
 
 class StillsDataset(AbismalDataset):
+    __DEFAULT_METADATA_KEYS__ = [
+            'dHKL',
+            'delpsical.rad',
+            's1.0',
+            's1.1',
+            's1.2',
+            'xyzcal.px.0',
+            'xyzcal.px.1',
+            #'xyzcal.px.2',
+    ]
+
     @cellify
     @spacegroupify
     def __init__(
@@ -154,16 +165,7 @@ class StillsDataset(AbismalDataset):
         hkl = torch.tensor(ds[['H', 'K', 'L']].to_numpy('int32'))
         d = torch.tensor(ds['dHKL'].to_numpy('float32'))
         wavelength = torch.tensor(ds['wavelength'].to_numpy('float32'))
-        metadata_keys = [
-            'dHKL',
-            'delpsical.rad',
-            's1.0',
-            's1.1',
-            's1.2',
-            'xyzcal.px.0',
-            'xyzcal.px.1',
-            #'xyzcal.px.2',
-        ]
+        metadata_keys = self.__DEFAULT_METADATA_KEYS__
         metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
         iobs  = torch.tensor(ds['intensity.sum.value'].to_numpy('float32'))
         sigiobs  = torch.tensor(np.sqrt(ds['intensity.sum.variance'].to_numpy('float32')))

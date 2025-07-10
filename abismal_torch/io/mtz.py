@@ -7,6 +7,11 @@ import torch
 
 
 class MTZDataset(AbismalDataset):
+    __DEFAULT_METADATA_KEYS__ = [
+        "XDET",
+        "YDET",
+    ]
+
     @cellify
     @spacegroupify
     def __init__(
@@ -84,10 +89,7 @@ class MTZDataset(AbismalDataset):
         if self.sigma_key is None:
             self.sigma_key = self._get_first_key_of_type(ds, "Q")
         if self.metadata_keys is None:
-            self.metadata_keys = [
-                "XDET",
-                "YDET",
-            ]
+            self.metadata_keys = self.__DEFAULT_METADATA_KEYS__
 
         ds.compute_dHKL(True).label_absences(True)
         ds = ds[(ds.dHKL >= self.dmin) & (~ds.ABSENT)]

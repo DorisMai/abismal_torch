@@ -1,6 +1,6 @@
 trainer:
   accelerator: "cpu"
-  max_steps: 30 #30_000
+  max_steps: 30_000
   deterministic: true
   log_every_n_steps: 10
   check_val_every_n_epoch: 1

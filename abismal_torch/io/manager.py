@@ -71,7 +71,7 @@ class AbismalDataModule(L.LightningDataModule):
             num_workers (int, optional): The number of workers for Pytorch DataLoader.
             pin_memory (bool, optional): Whether to pin memory.
             persistent_workers (bool, optional): Whether workers are persistent.
-            **handler_keargs (optional): Additional keyword arguments to pass to the file handler
+            **handler_kwargs (optional): Additional keyword arguments to pass to the file handler
         """
         super().__init__()
         if isinstance(rasu_configs, dict):
@@ -81,26 +81,25 @@ class AbismalDataModule(L.LightningDataModule):
         for rasu_config in rasu_configs:
             # get the anomalous flag for rasu
             rasu_id = rasu_config.get('rasu_id', 0)
-            anomalous = rasu_config.get('anomalous', False)
-            if rasu_id in self.anomalouss:
-                assert self.anomalouss[rasu_id] == anomalous, f"Inconsistent anomalous flags for rasu_id {rasu_id}"
+            anomalous = rasu_config.pop('anomalous', False)
+            if rasu_id in self.anomalouss and self.anomalouss[rasu_id] != anomalous:
+                raise ValueError(f"Inconsistent anomalous flags for rasu_id {rasu_id}")
             self.anomalouss[rasu_id] = anomalous
             # parse the input files
             input_files = rasu_config.pop('input_files')
-            if isinstance(input_files, str):input_files = [input_files]
-
-            # make a dict of input_files to handler
-            input_dict = {}
+            if isinstance(input_files, str):
+                input_files = [input_files]
+            handler_type_2_input_files = {}
             for input_file in input_files:
                 handler_type = self.determine_handler_type(input_file)
-                if handler_type not in input_dict:
-                    input_dict[handler_type] = []
-                input_dict[handler_type].append(input_file)
-                
-            for k, v in input_dict.items():
+                if handler_type not in handler_type_2_input_files:
+                    handler_type_2_input_files[handler_type] = []
+                handler_type_2_input_files[handler_type].append(input_file)
+            for k, v in handler_type_2_input_files.items():
                 self.datasets.extend(AbismalDataModule.handlers[k].from_sequence(v, **rasu_config, **handler_kwargs))
 
-        assert len(self.anomalouss) == max(self.anomalouss.keys()) + 1, f"rasu_ids must form contiguous sequence starting from 0."
+        if len(self.anomalouss) == max(self.anomalouss.keys()) + 1:
+            raise ValueError("rasu_ids must form contiguous sequence starting from 0.")
         self.dataset = AbismalConcatDataset(self.datasets)
         self.batch_size = batch_size
         self.num_workers = num_workers

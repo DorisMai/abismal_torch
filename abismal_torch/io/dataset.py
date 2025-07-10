@@ -6,6 +6,8 @@ import gemmi
 
 
 class AbismalDataset(Dataset):
+    __DEFAULT_METADATA_KEYS__ = []
+
     def __init__(
         self,
         cell: Optional[List[float]] = None,
@@ -27,6 +29,7 @@ class AbismalDataset(Dataset):
             - implement _can_handle and _load_tensor_data methods
             - optionally overload __len__ with a lazy version. 
             - overload the classmethod `from_sequence` if more than one input file is required. for instance in the case of dials .expt and .refl file pairs.
+            - overload the __DEFAULT_METADATA_KEYS__ class attribute if the dataset has a different set of metadata keys.
 
         kwargs allow subclass to accept additional arguments while ignore irrelevant arguments from the manager.
         """
