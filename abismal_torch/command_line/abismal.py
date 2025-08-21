@@ -150,7 +150,8 @@ def main():
     )
 
     # ========== construct RASU ==========#
-    from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUGraph
+    from abismal_torch.symmetry.reciprocal_asu import (ReciprocalASU,
+                                                       ReciprocalASUGraph)
 
     rasus = []
     num_rasus = data.num_asus
@@ -177,7 +178,8 @@ def main():
 
         likelihood = NormalLikelihood()
     else:
-        from abismal_torch.likelihood import NormalLikelihood, StudentTLikelihood
+        from abismal_torch.likelihood import (NormalLikelihood,
+                                              StudentTLikelihood)
 
         likelihood = StudentTLikelihood(args.studentt_dof)
 

@@ -1,2 +1,3 @@
 from .op import Op
-from .reciprocal_asu import ReciprocalASU, ReciprocalASUCollection, ReciprocalASUGraph
+from .reciprocal_asu import (ReciprocalASU, ReciprocalASUCollection,
+                             ReciprocalASUGraph)

@@ -1,15 +1,16 @@
 from cgitb import handler
-from typing import Optional, Sequence, Mapping
+from typing import Mapping, Optional, Sequence
 
+import gemmi
 import lightning as L
 import torch
 from torch.utils.data import DataLoader, random_split
-import gemmi
 
+from abismal_torch.io.dataset import AbismalConcatDataset
 from abismal_torch.io.mtz import MTZDataset
 from abismal_torch.io.stills import StillsDataset
-from abismal_torch.io.dataset import AbismalConcatDataset
-        
+
+
 def collate_fn(batch):
     """
     Custom collate function to handle batches of image reflections.
@@ -33,11 +34,13 @@ def collate_fn(batch):
 
     return result
 
+
 class AbismalDataModule(L.LightningDataModule):
     handlers = {
-        MTZDataset.__HANDLER_TYPE__ : MTZDataset,
-        StillsDataset.__HANDLER_TYPE__ : StillsDataset,
+        MTZDataset.__HANDLER_TYPE__: MTZDataset,
+        StillsDataset.__HANDLER_TYPE__: StillsDataset,
     }
+
     def __init__(
         self,
         rasu_configs: Mapping | Sequence[Mapping],
@@ -52,10 +55,10 @@ class AbismalDataModule(L.LightningDataModule):
         """
         Load files using LightningDataModule. This module supports various configurations for the
         symmetry. The unit cells and/or spacegroups can be fully specified or inferred from the data.
-        If cell or spacegroup are not specificed, they will be inferred on a per-rasu basis. 
+        If cell or spacegroup are not specificed, they will be inferred on a per-rasu basis.
 
         Args:
-            rasu_configs (dict): A dictionary or list of dictionaries of configuration for each rasu. 
+            rasu_configs (dict): A dictionary or list of dictionaries of configuration for each rasu.
                 Configuration keys are:
                     - rasu_id (int): The RASU id corresponding to the input files, must be 0 indexed.
                     - input_files (str or Sequence[str]): a path or a list of paths to the reflection files.
@@ -82,13 +85,13 @@ class AbismalDataModule(L.LightningDataModule):
         _used_handler_types = set()
         for rasu_config in rasu_configs:
             # get the anomalous flag for rasu
-            rasu_id = rasu_config.get('rasu_id', 0)
-            anomalous = rasu_config.pop('anomalous', False)
+            rasu_id = rasu_config.get("rasu_id", 0)
+            anomalous = rasu_config.pop("anomalous", False)
             if rasu_id in self.anomalouss and self.anomalouss[rasu_id] != anomalous:
                 raise ValueError(f"Inconsistent anomalous flags for rasu_id {rasu_id}")
             self.anomalouss[rasu_id] = anomalous
             # parse the input files
-            input_files = rasu_config.pop('input_files')
+            input_files = rasu_config.pop("input_files")
             if isinstance(input_files, str):
                 input_files = [input_files]
             handler_type_2_input_files = {}
@@ -100,26 +103,37 @@ class AbismalDataModule(L.LightningDataModule):
             # construct the datasets for this rasu
             _used_handler_types.update(handler_type_2_input_files.keys())
             for k, v in handler_type_2_input_files.items():
-                self.datasets.extend(AbismalDataModule.handlers[k].from_sequence(v, **rasu_config, **handler_kwargs))
+                self.datasets.extend(
+                    AbismalDataModule.handlers[k].from_sequence(
+                        v, **rasu_config, **handler_kwargs
+                    )
+                )
 
         if len(self.anomalouss) != max(self.anomalouss.keys()) + 1:
             raise ValueError("rasu_ids must form contiguous sequence starting from 0.")
-        
+
         # handle metadata keys for mixing handler types
         _used_handler_types = sorted(_used_handler_types)
         _used_handler_metadata_lengths = []
         if len(_used_handler_types) > 1:
             _used_handler_2_metadata_length = {
-                handler_type: len(AbismalDataModule.handlers[handler_type].__DEFAULT_METADATA_KEYS__)
+                handler_type: len(
+                    AbismalDataModule.handlers[handler_type].__DEFAULT_METADATA_KEYS__
+                )
                 for handler_type in _used_handler_types
             }
             for k, v in handler_kwargs.items():
-                if k.endswith('_metadata_keys'):
-                    handler_type = k.split('_metadata_keys')[0]
+                if k.endswith("_metadata_keys"):
+                    handler_type = k.split("_metadata_keys")[0]
                     _used_handler_2_metadata_length[handler_type] = len(v)
-            _used_handler_metadata_lengths = [_used_handler_2_metadata_length[handler_type] for handler_type in _used_handler_types]
-        
-        self.dataset = AbismalConcatDataset(self.datasets, _used_handler_types, _used_handler_metadata_lengths)
+            _used_handler_metadata_lengths = [
+                _used_handler_2_metadata_length[handler_type]
+                for handler_type in _used_handler_types
+            ]
+
+        self.dataset = AbismalConcatDataset(
+            self.datasets, _used_handler_types, _used_handler_metadata_lengths
+        )
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.validation_fraction = validation_fraction
@@ -130,11 +144,11 @@ class AbismalDataModule(L.LightningDataModule):
     @property
     def dmins(self):
         return self.dataset.dmins
-    
+
     @property
     def cells(self):
         return self.dataset.cells
-    
+
     @property
     def spacegroups(self):
         return self.dataset.spacegroups
@@ -147,7 +161,9 @@ class AbismalDataModule(L.LightningDataModule):
         for k, v in AbismalDataModule.handlers.items():
             if v.can_handle([input_files]):
                 return k
-        raise ValueError(f"Cannot determine the parser to handle the file: {input_files}")
+        raise ValueError(
+            f"Cannot determine the parser to handle the file: {input_files}"
+        )
 
     def setup(self, stage: Optional[str] = None):
         # Random split based on images, not reflections
@@ -192,6 +208,7 @@ class AbismalDataModule(L.LightningDataModule):
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers,
         )
+
 
 #    def transfer_batch_to_device(self, batch, device, dataloader_idx):
 #        return {

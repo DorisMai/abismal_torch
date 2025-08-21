@@ -2,19 +2,12 @@ import gemmi
 import numpy as np
 import pytest
 import torch
-from reciprocalspaceship.utils import (
-    compute_structurefactor_multiplicity,
-    generate_reciprocal_cell,
-    hkl_to_asu,
-    is_absent,
-    is_centric,
-)
+from reciprocalspaceship.utils import (compute_structurefactor_multiplicity,
+                                       generate_reciprocal_cell, hkl_to_asu,
+                                       is_absent, is_centric)
 
-from abismal_torch.symmetry import (
-    ReciprocalASU,
-    ReciprocalASUCollection,
-    ReciprocalASUGraph,
-)
+from abismal_torch.symmetry import (ReciprocalASU, ReciprocalASUCollection,
+                                    ReciprocalASUGraph)
 
 
 @pytest.mark.parametrize("anomalous", [True, False])

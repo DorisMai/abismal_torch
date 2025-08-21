@@ -3,12 +3,10 @@ import pytest
 import torch
 import torch.distributions as td
 
-from abismal_torch.layers.standardization import (
-    LazyWelfordStandardization,
-    WelfordStandardization,
-    LazyMovingStandardization,
-    MovingStandardization,
-)
+from abismal_torch.layers.standardization import (LazyMovingStandardization,
+                                                  LazyWelfordStandardization,
+                                                  MovingStandardization,
+                                                  WelfordStandardization)
 
 
 @pytest.fixture
@@ -58,25 +56,33 @@ def data_distribution(ndim=5, distribution_type=td.Normal):
 @pytest.mark.parametrize("center", [True, False])
 @pytest.mark.parametrize("decay", [0.99, 0.999])
 @pytest.mark.parametrize("batch_size", [1, 120])
-def test_lazy_moving_standardization(data_distribution, center, decay, batch_size, nsamples=100_000):
+def test_lazy_moving_standardization(
+    data_distribution, center, decay, batch_size, nsamples=100_000
+):
     samples = data_distribution.sample((nsamples,))
     standardization = LazyMovingStandardization(decay=decay, center=center)
     for i in range(0, nsamples, batch_size):
-        batch = samples[i:i+batch_size]
+        batch = samples[i : i + batch_size]
         standardized_batch = standardization(batch)
 
     assert torch.allclose(standardization.mean, data_distribution.mean, rtol=0.5)
     assert torch.allclose(standardization.var, data_distribution.variance, rtol=0.5)
-    assert standardization.num_batches_tracked == int(np.ceil(nsamples/batch_size))
+    assert standardization.num_batches_tracked == int(np.ceil(nsamples / batch_size))
     if batch_size > 1:
-        assert torch.allclose(standardized_batch.std(dim=0), torch.ones(batch.shape[1]), atol=1)
-    
+        assert torch.allclose(
+            standardized_batch.std(dim=0), torch.ones(batch.shape[1]), atol=1
+        )
+
     standardized_batch_mean = standardized_batch.mean(dim=0)
     if center:
-        expected_standardized_batch = ((batch - data_distribution.mean)/data_distribution.stddev).mean(dim=0)
-        assert torch.allclose(standardized_batch_mean, expected_standardized_batch, atol=1), \
-            f"batch mean: {batch.mean(dim=0)}, standardized batch mean: {standardized_batch_mean}, expected standardized batch mean: {expected_standardized_batch}"
+        expected_standardized_batch = (
+            (batch - data_distribution.mean) / data_distribution.stddev
+        ).mean(dim=0)
+        assert torch.allclose(
+            standardized_batch_mean, expected_standardized_batch, atol=1
+        ), f"batch mean: {batch.mean(dim=0)}, standardized batch mean: {standardized_batch_mean}, expected standardized batch mean: {expected_standardized_batch}"
     else:
-        expected_standardized_batch = (batch/data_distribution.stddev).mean(dim=0)
-        assert torch.allclose(standardized_batch_mean, expected_standardized_batch, atol=1), \
-            f"batch mean: {batch.mean(dim=0)}, standardized batch mean: {standardized_batch_mean}, expected standardized batch mean: {expected_standardized_batch}"
+        expected_standardized_batch = (batch / data_distribution.stddev).mean(dim=0)
+        assert torch.allclose(
+            standardized_batch_mean, expected_standardized_batch, atol=1
+        ), f"batch mean: {batch.mean(dim=0)}, standardized batch mean: {standardized_batch_mean}, expected standardized batch mean: {expected_standardized_batch}"

@@ -4,11 +4,8 @@ import gemmi
 import numpy as np
 import torch
 from reciprocalspaceship.decorators import cellify, spacegroupify
-from reciprocalspaceship.utils import (
-    apply_to_hkl,
-    generate_reciprocal_asu,
-    generate_reciprocal_cell,
-)
+from reciprocalspaceship.utils import (apply_to_hkl, generate_reciprocal_asu,
+                                       generate_reciprocal_cell)
 
 from abismal_torch.symmetry.op import Op
 

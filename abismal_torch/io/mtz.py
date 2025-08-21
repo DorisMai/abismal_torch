@@ -1,9 +1,10 @@
 from typing import List, Optional, Sequence
 
 import reciprocalspaceship as rs
-from reciprocalspaceship.decorators import cellify,spacegroupify
-from abismal_torch.io.dataset import AbismalDataset
 import torch
+from reciprocalspaceship.decorators import cellify, spacegroupify
+
+from abismal_torch.io.dataset import AbismalDataset
 
 
 class MTZDataset(AbismalDataset):
@@ -11,7 +12,7 @@ class MTZDataset(AbismalDataset):
         "XDET",
         "YDET",
     ]
-    __HANDLER_TYPE__ = 'mtz'
+    __HANDLER_TYPE__ = "mtz"
 
     @cellify
     @spacegroupify
@@ -22,7 +23,7 @@ class MTZDataset(AbismalDataset):
         spacegroup: Optional[str] = None,
         wavelength: Optional[float] = None,
         rasu_id: Optional[int] = 0,
-        dmin: Optional[float] = 0.,
+        dmin: Optional[float] = 0.0,
         batch_key: Optional[str] = None,
         intensity_key: Optional[str] = None,
         sigma_key: Optional[str] = None,
@@ -100,16 +101,15 @@ class MTZDataset(AbismalDataset):
         ds.sort_values("image_id", inplace=True)
 
         self._tensor_data = {
-            "image_id" : torch.tensor(ds.image_id.to_numpy("int32")),
-            "rasu_id" : torch.ones(len(ds), dtype=torch.int32) * self.rasu_id,
-            "hkl_in" : torch.tensor(ds.get_hkls()),
-            "resolution" : torch.tensor(ds.dHKL.to_numpy()),
-            "wavelength" : torch.ones(len(ds), dtype=torch.float32) * self.wavelength,
-            "metadata" : torch.tensor(ds[self.metadata_keys].to_numpy()),
-            "iobs" : torch.tensor(ds[self.intensity_key].to_numpy()), 
-            "sigiobs" : torch.tensor(ds[self.sigma_key].to_numpy()),
+            "image_id": torch.tensor(ds.image_id.to_numpy("int32")),
+            "rasu_id": torch.ones(len(ds), dtype=torch.int32) * self.rasu_id,
+            "hkl_in": torch.tensor(ds.get_hkls()),
+            "resolution": torch.tensor(ds.dHKL.to_numpy()),
+            "wavelength": torch.ones(len(ds), dtype=torch.float32) * self.wavelength,
+            "metadata": torch.tensor(ds[self.metadata_keys].to_numpy()),
+            "iobs": torch.tensor(ds[self.intensity_key].to_numpy()),
+            "sigiobs": torch.tensor(ds[self.sigma_key].to_numpy()),
         }
-
 
     def _get_first_key_of_type(self, ds, dtype):
         idx = ds.dtypes == dtype

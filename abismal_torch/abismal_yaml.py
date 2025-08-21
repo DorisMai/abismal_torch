@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Mapping
+from typing import Mapping, Optional, Sequence
 
 import gemmi
 import lightning as L
@@ -6,16 +6,26 @@ import torch
 from lightning.pytorch.utilities import grad_norm
 
 from abismal_torch.callbacks import MTZSaver
-from abismal_torch.merging import VariationalMergingModel
 from abismal_torch.io.manager import AbismalDataModule
-from abismal_torch.symmetry.reciprocal_asu import ReciprocalASU, ReciprocalASUCollection, ReciprocalASUGraph
+from abismal_torch.merging import VariationalMergingModel
+from abismal_torch.symmetry.reciprocal_asu import (ReciprocalASU,
+                                                   ReciprocalASUCollection,
+                                                   ReciprocalASUGraph)
 
 
 class AbismalLitModule(L.LightningModule):
     def __init__(
         self,
-        cells: Sequence[gemmi.UnitCell] | Sequence[Sequence[float]] | Mapping[int, gemmi.UnitCell | Sequence[float]],
-        spacegroups: Sequence[gemmi.SpaceGroup] | Sequence[str] | Mapping[int, gemmi.SpaceGroup | str],
+        cells: (
+            Sequence[gemmi.UnitCell]
+            | Sequence[Sequence[float]]
+            | Mapping[int, gemmi.UnitCell | Sequence[float]]
+        ),
+        spacegroups: (
+            Sequence[gemmi.SpaceGroup]
+            | Sequence[str]
+            | Mapping[int, gemmi.SpaceGroup | str]
+        ),
         dmins: Sequence[float] | Mapping[int, float],
         anomalouss: Sequence[bool] | Mapping[int, bool],
         scaling_model: torch.nn.Module,
@@ -51,8 +61,13 @@ class AbismalLitModule(L.LightningModule):
 
     def _setup_rac(
         self,
-        cells: Mapping[int, gemmi.UnitCell | Sequence[float]] | Sequence[gemmi.UnitCell | Sequence[float]],
-        spacegroups: Mapping[int, gemmi.SpaceGroup | str] | Sequence[gemmi.SpaceGroup | str],
+        cells: (
+            Mapping[int, gemmi.UnitCell | Sequence[float]]
+            | Sequence[gemmi.UnitCell | Sequence[float]]
+        ),
+        spacegroups: (
+            Mapping[int, gemmi.SpaceGroup | str] | Sequence[gemmi.SpaceGroup | str]
+        ),
         dmins: Mapping[int, float] | Sequence[float],
         anomalouss: Mapping[int, bool] | Sequence[bool],
     ):
@@ -143,7 +158,7 @@ class AbismalLitModule(L.LightningModule):
             }
         )
         return val_loss
-    
+
     def test_step(self, batch, batch_idx):
         xout = self.merging_model(batch)
         test_loss = (
@@ -172,19 +187,25 @@ from lightning.pytorch.cli import LightningCLI
 
 class MyCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
-        parser.link_arguments("data.anomalouss", "model.anomalouss", apply_on="instantiate")
+        parser.link_arguments(
+            "data.anomalouss", "model.anomalouss", apply_on="instantiate"
+        )
         parser.link_arguments("data.dmins", "model.dmins", apply_on="instantiate")
         parser.link_arguments("data.cells", "model.cells", apply_on="instantiate")
-        parser.link_arguments("data.spacegroups", "model.spacegroups", apply_on="instantiate")
+        parser.link_arguments(
+            "data.spacegroups", "model.spacegroups", apply_on="instantiate"
+        )
         parser.link_arguments(
             "trainer.default_root_dir", "trainer.logger.init_args.save_dir"
         )
-        parser.add_argument("--ckpt_path", type=str, default=None) # only if run=False for MyCLI
+        parser.add_argument(
+            "--ckpt_path", type=str, default=None
+        )  # only if run=False for MyCLI
 
         # configure forced callbacks for MTZSaver
         parser.add_lightning_class_args(MTZSaver, "mtz_output")
         # ================================= Note on callback args =================================
-        # If using run=True for LightningCLI with subcommand "fit", default values of MTZSaver can 
+        # If using run=True for LightningCLI with subcommand "fit", default values of MTZSaver can
         # only be overwritten via command line flags but not yaml files. This issue seems absent in
         # instantiation only mode.
         # ====================================== End of note ======================================
@@ -223,7 +244,7 @@ def main():
                 os.path.join(config_dir, "training_config.yaml"),
                 os.path.join(config_dir, "merging_model_config.yaml"),
             ],
-        }
+        },
     )
     cli.trainer.fit(cli.model, cli.datamodule)
     cli.trainer.test(cli.model, cli.datamodule)

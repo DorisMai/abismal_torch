@@ -1,9 +1,10 @@
+from os.path import abspath, dirname, join
+
 import gemmi
 import pytest
 import torch
 
 from abismal_torch.symmetry import ReciprocalASU, ReciprocalASUGraph
-from os.path import abspath, dirname, join
 
 
 @pytest.fixture
@@ -56,6 +57,7 @@ def custom_scaling_model_params():
         "activation": None,
     }
 
+
 @pytest.fixture
 def refl_file():
     """
@@ -64,6 +66,7 @@ def refl_file():
     datapath = [".", "data", "dials.refl"]
     file_name = abspath(join(dirname(__file__), *datapath))
     return file_name
+
 
 @pytest.fixture
 def expt_file():
@@ -82,6 +85,7 @@ def num_dials_stills():
     """
     return 3
 
+
 @pytest.fixture
 def mtz_file():
     """
@@ -91,26 +95,30 @@ def mtz_file():
     file_name = abspath(join(dirname(__file__), *datapath))
     return file_name
 
+
 @pytest.fixture
 def data_files():
     """
     Return a dictionary of different input files for datasets
     """
     return {
-        'mtz' : mtz_file(),
-        'stills' : (expt_file(), refl_file()),
+        "mtz": mtz_file(),
+        "stills": (expt_file(), refl_file()),
     }
+
 
 @pytest.fixture
 def get_dataset(expt_file, refl_file, mtz_file):
     def f(file_type, **kwargs):
-        if file_type == 'stills':
+        if file_type == "stills":
             from abismal_torch.io.stills import StillsDataset
+
             return StillsDataset(expt_file, refl_file, **kwargs)
-        if file_type == 'mtz':
+        if file_type == "mtz":
             from abismal_torch.io.mtz import MTZDataset
+
             return MTZDataset(mtz_file, **kwargs)
         else:
             raise ValueError(f"Unknown file_type, {file_type}.")
-    return f
 
+    return f

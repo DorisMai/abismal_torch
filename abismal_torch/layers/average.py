@@ -3,7 +3,8 @@ import torch
 
 class ImageAverage(torch.nn.Module):
     def forward(
-        self, x: torch.Tensor, image_indices: torch.Tensor, counts: torch.Tensor) -> torch.Tensor:
+        self, x: torch.Tensor, image_indices: torch.Tensor, counts: torch.Tensor
+    ) -> torch.Tensor:
         """
         Average x along images and across mc samples.
 
@@ -11,7 +12,7 @@ class ImageAverage(torch.nn.Module):
             x (torch.Tensor): Source value tensor of shape (n_reflns, n_dim).
             image_indices (torch.Tensor): A tensor of shape (n_reflns,) that contains the
                 image index (range 0 to n_images-1) for each reflection in the batch.
-            counts (torch.Tensor): A tensor of shape (n_images,) that contains the 
+            counts (torch.Tensor): A tensor of shape (n_images,) that contains the
                 number of reflections in each image.
         Returns:
             averaged (torch.Tensor): A tensor of shape (n_images, n_dim).

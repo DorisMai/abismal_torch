@@ -81,8 +81,12 @@ class TestMerging:
         assert xout["ipred_avg"].shape == (
             myinputs["iobs"].shape[0],
         ), f"xout[ipred_aveg] shape is {xout['ipred_avg'].shape}"
-        assert xout["loss_nll"].shape == torch.Size([data_params["n_image"]]), f"xout[loss_nll].shape is {xout['loss_nll'].shape}"
-        assert xout["loss_kl"].shape == torch.Size([rag.rac_size]), f"xout[loss_kl].shape is {xout['loss_kl'].shape}"
+        assert xout["loss_nll"].shape == torch.Size(
+            [data_params["n_image"]]
+        ), f"xout[loss_nll].shape is {xout['loss_nll'].shape}"
+        assert xout["loss_kl"].shape == torch.Size(
+            [rag.rac_size]
+        ), f"xout[loss_kl].shape is {xout['loss_kl'].shape}"
 
         opt = torch.optim.Adam(merging_model.parameters())
         for _ in range(steps):

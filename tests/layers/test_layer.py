@@ -4,7 +4,8 @@ import torch
 import torch.nn.init as init
 
 from abismal_torch.layers import *
-from abismal_torch.layers.feedforward import CustomInitLazyLinear, FeedForward_GLU
+from abismal_torch.layers.feedforward import (CustomInitLazyLinear,
+                                              FeedForward_GLU)
 from abismal_torch.scaling import ImageScaler
 
 
@@ -27,7 +28,9 @@ def image_id(data_params):
 
 def test_imageaverage(data_params, data, image_id):
     average = ImageAverage()
-    unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
+    unique_image_ids, unique_indices, counts = torch.unique(
+        image_id, return_inverse=True, return_counts=True
+    )
     out = average(data, unique_indices, counts)
     assert out.shape == (data_params["n_image"], data_params["n_feature"])
 
@@ -181,7 +184,9 @@ def test_image_scaler(
     custom_scaling_model = ImageScaler(
         share_weights=share_weights, use_glu=use_glu, **custom_scaling_model_params
     )
-    unique_image_ids, unique_indices, counts = torch.unique(image_id, return_inverse=True, return_counts=True)
+    unique_image_ids, unique_indices, counts = torch.unique(
+        image_id, return_inverse=True, return_counts=True
+    )
     _ = custom_scaling_model(inputs, unique_indices, counts, mc_samples)
 
     if share_weights:

@@ -1,10 +1,11 @@
-from typing import Optional,List,Sequence,Union,Iterable
-import torch
-from torch.utils.data import Dataset,ConcatDataset
-from reciprocalspaceship.decorators import cellify,spacegroupify
-import numpy as np
-import gemmi
 import bisect
+from typing import Iterable, List, Optional, Sequence, Union
+
+import gemmi
+import numpy as np
+import torch
+from reciprocalspaceship.decorators import cellify, spacegroupify
+from torch.utils.data import ConcatDataset, Dataset
 
 
 class AbismalDataset(Dataset):
@@ -15,22 +16,22 @@ class AbismalDataset(Dataset):
         self,
         cell: Optional[List[float]] = None,
         spacegroup: Optional[str] = None,
-        wavelength: Optional[float] = 1.,
+        wavelength: Optional[float] = 1.0,
         rasu_id: Optional[int] = 0,
         dmin: Optional[float] = None,
         **kwargs,
     ):
         """
-        Base class for all AbismalDatasets. This class should not be used directly. 
-        Subclass this file to add new data types to abismal. 
+        Base class for all AbismalDatasets. This class should not be used directly.
+        Subclass this file to add new data types to abismal.
 
         Apart from following the requirements of `torch.utils.data.Dataset`, subclasses must
-        adhere to the following contract. 
+        adhere to the following contract.
             - Accept cell, spacegroup, wavelength, rasu_id, and dmin kwargs
             - If cell or spacegroup are None, populate them in the subclasses __init__
             - If self.cell or self.spacegroup are changed, obey the new values when filtering by resolution
             - implement _can_handle and _load_tensor_data methods
-            - optionally overload __len__ with a lazy version. 
+            - optionally overload __len__ with a lazy version.
             - overload the classmethod `from_sequence` if more than one input file is required. for instance in the case of dials .expt and .refl file pairs.
             - overload the __DEFAULT_METADATA_KEYS__ class attribute if the dataset has a different set of metadata keys.
 
@@ -45,29 +46,39 @@ class AbismalDataset(Dataset):
 
     @classmethod
     def from_sequence(
-            cls, 
-            input_files: Iterable[str], 
-            dmin : List[float] | float = 0., 
-            wavelength : List[float] | float = 1.0,
-            rasu_id : List[int] | int = 0,
-            cell : List[gemmi.UnitCell] | gemmi.UnitCell = None,
-            spacegroup : List[gemmi.SpaceGroup] | gemmi.SpaceGroup = None,
-            **kwargs,
-        ) -> List:
-        kwargs.update({
-            'dmin' : dmin,
-            'wavelength' : wavelength,
-            'rasu_id' : rasu_id,
-            'cell' : cell,
-            'spacegroup' : spacegroup,
-        })
+        cls,
+        input_files: Iterable[str],
+        dmin: List[float] | float = 0.0,
+        wavelength: List[float] | float = 1.0,
+        rasu_id: List[int] | int = 0,
+        cell: List[gemmi.UnitCell] | gemmi.UnitCell = None,
+        spacegroup: List[gemmi.SpaceGroup] | gemmi.SpaceGroup = None,
+        **kwargs,
+    ) -> List:
+        kwargs.update(
+            {
+                "dmin": dmin,
+                "wavelength": wavelength,
+                "rasu_id": rasu_id,
+                "cell": cell,
+                "spacegroup": spacegroup,
+            }
+        )
         length = len(input_files)
-        for k,v in kwargs.items():
-            if (not isinstance(v, list)) or (not isinstance(v, tuple)):
+        for k, v in kwargs.items():
+            expand = True
+            expand &= (not isinstance(v, list)) and (not isinstance(v, tuple))
+            expand |= k == "cell"
+            expand |= "metadata_keys" in k
+            if expand:
                 kwargs[k] = [v] * length
+            elif len(v) != length:
+                raise ValueError(
+                    f"Length of {k} must be the same as the number of input files"
+                )
         result = []
-        for i,f in enumerate(input_files):
-            result.append(cls(f, **{k : v[i] for k,v in kwargs.items()}))
+        for i, f in enumerate(input_files):
+            result.append(cls(f, **{k: v[i] for k, v in kwargs.items()}))
         return result
 
     @staticmethod
@@ -156,13 +167,13 @@ class AbismalDataset(Dataset):
         calling _load_tensor_data. Alternatively you can set self._length.
         """
         if self._length is None:
-            self._length = self.tensor_data['image_id'].max() + 1
+            self._length = self.tensor_data["image_id"].max() + 1
         return self._length
 
     def __getitem__(self, idx):
         """
         Returns a single image worth of data as a dictionary with the following structure
-        
+
         ```python
         {
             'image_id': torch.tensor[int32] of shape (n_refls,),
@@ -182,30 +193,37 @@ class AbismalDataset(Dataset):
             datum (dict): A dictionary with the following keys
         """
         l = len(self)
-        if (idx > l -1)  | (idx < -l):
-            raise IndexError(f"Index {idx} out of range for AbismalDataset with length {l}")
+        if (idx > l - 1) | (idx < -l):
+            raise IndexError(
+                f"Index {idx} out of range for AbismalDataset with length {l}"
+            )
         if idx in self._image_data:
             return self._image_data[idx]
 
-        mask = self.tensor_data['image_id'] == idx
-        self._image_data[idx] = {k:v[mask] for k,v in self._tensor_data.items()}
+        mask = self.tensor_data["image_id"] == idx
+        self._image_data[idx] = {k: v[mask] for k, v in self._tensor_data.items()}
         mask = ~mask
-        self._tensor_data = {k:v[mask] for k,v in self._tensor_data.items()}
+        self._tensor_data = {k: v[mask] for k, v in self._tensor_data.items()}
         return self._image_data[idx]
+
 
 class AbismalConcatDataset(ConcatDataset):
     """
     This is a subclass of torch.utils.data.ConcatDataset which is aware of the
     symmetry of AbismalDatasets.
     """
-    def __init__(self, datasets: List[Dataset], 
-                 handler_types: Optional[List[str]] = [], 
-                 handler_metadata_lengths: Optional[List[int]] = []) -> None:
+
+    def __init__(
+        self,
+        datasets: List[Dataset],
+        handler_types: Optional[List[str]] = [],
+        handler_metadata_lengths: Optional[List[int]] = [],
+    ) -> None:
         """
         Args:
             datasets (List[Dataset]): A list of AbismalDatasets, which can be longer
               than the number of asus.
-        
+
         Attributes:
             lengths (dict): A dictionary of rasu_id to number of images.
             cells (dict): A dictionary of rasu_id to cell.
@@ -225,12 +243,10 @@ class AbismalConcatDataset(ConcatDataset):
         self._zero_padding = False
         if len(self._handler_types) > 1:
             if len(self._handler_metadata_lengths) != len(self._handler_types):
-                raise ValueError("If mixing handler types, handler_types and handler_metadata_lengths must be the same length")
+                raise ValueError(
+                    "If mixing handler types, handler_types and handler_metadata_lengths must be the same length"
+                )
             self._zero_padding = True
-
-        print("for each dataset, the metadata keys are:")
-        for ds in self.datasets:
-            print(ds.metadata_keys)
 
     @property
     def lengths(self):
@@ -248,8 +264,10 @@ class AbismalConcatDataset(ConcatDataset):
         for ds in self.datasets:
             if ds.rasu_id not in cells:
                 cells[ds.rasu_id] = np.zeros(6)
-            cells[ds.rasu_id] += len(ds) * np.array(ds.cell.parameters) / lens[ds.rasu_id]
-        cells = {k:gemmi.UnitCell(*v) for k,v in cells.items()}
+            cells[ds.rasu_id] += (
+                len(ds) * np.array(ds.cell.parameters) / lens[ds.rasu_id]
+            )
+        cells = {k: gemmi.UnitCell(*v) for k, v in cells.items()}
         return cells
 
     @property
@@ -257,7 +275,9 @@ class AbismalConcatDataset(ConcatDataset):
         spacegroups = {}
         for ds in self.datasets:
             if ds.rasu_id in spacegroups:
-                assert spacegroups[ds.rasu_id] == ds.spacegroup, f"Inconsistent spacegroups for rasu_id {ds.rasu_id}"
+                assert (
+                    spacegroups[ds.rasu_id] == ds.spacegroup
+                ), f"Inconsistent spacegroups for rasu_id {ds.rasu_id}"
             spacegroups[ds.rasu_id] = ds.spacegroup
         return spacegroups
 
@@ -266,10 +286,12 @@ class AbismalConcatDataset(ConcatDataset):
         dmins = {}
         for ds in self.datasets:
             if ds.rasu_id in dmins:
-                assert dmins[ds.rasu_id] == ds.dmin, f"Inconsistent dmins for rasu_id {ds.rasu_id}"
+                assert (
+                    dmins[ds.rasu_id] == ds.dmin
+                ), f"Inconsistent dmins for rasu_id {ds.rasu_id}"
             dmins[ds.rasu_id] = ds.dmin
         return dmins
-    
+
     def __getitem__(self, idx):
         if idx < 0:
             if -idx > len(self):
@@ -284,12 +306,19 @@ class AbismalConcatDataset(ConcatDataset):
             sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
 
         sample = self.datasets[dataset_idx][sample_idx]
-        if self._zero_padding and (sample['metadata'].shape[1] != sum(self._handler_metadata_lengths)):
-            handler_idx = self._handler_types.index(self.datasets[dataset_idx].__HANDLER_TYPE__)
+        if self._zero_padding and (
+            sample["metadata"].shape[1] != sum(self._handler_metadata_lengths)
+        ):
+            handler_idx = self._handler_types.index(
+                self.datasets[dataset_idx].__HANDLER_TYPE__
+            )
             start_idx = sum(self._handler_metadata_lengths[:handler_idx])
             end_idx = start_idx + self._handler_metadata_lengths[handler_idx]
-            num_reflections = sample['metadata'].shape[0]
-            _padded_metadata = torch.zeros((num_reflections, sum(self._handler_metadata_lengths)), dtype=sample['metadata'].dtype)
-            _padded_metadata[:,start_idx:end_idx] = sample['metadata']
-            sample['metadata'] = _padded_metadata
+            num_reflections = sample["metadata"].shape[0]
+            _padded_metadata = torch.zeros(
+                (num_reflections, sum(self._handler_metadata_lengths)),
+                dtype=sample["metadata"].dtype,
+            )
+            _padded_metadata[:, start_idx:end_idx] = sample["metadata"]
+            sample["metadata"] = _padded_metadata
         return sample
