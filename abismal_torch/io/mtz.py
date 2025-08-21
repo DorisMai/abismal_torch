@@ -11,6 +11,7 @@ class MTZDataset(AbismalDataset):
         "XDET",
         "YDET",
     ]
+    __HANDLER_TYPE__ = 'mtz'
 
     @cellify
     @spacegroupify
@@ -25,7 +26,7 @@ class MTZDataset(AbismalDataset):
         batch_key: Optional[str] = None,
         intensity_key: Optional[str] = None,
         sigma_key: Optional[str] = None,
-        metadata_keys: Optional[List[str]] = None,
+        mtz_metadata_keys: Optional[List[str]] = None,
         **kwargs,
     ):
         """
@@ -55,7 +56,10 @@ class MTZDataset(AbismalDataset):
         self.intensity_key = intensity_key
         self.sigma_key = sigma_key
         self.wavelength = wavelength
-        self.metadata_keys = metadata_keys
+        if mtz_metadata_keys is None:
+            self.metadata_keys = self.__DEFAULT_METADATA_KEYS__
+        else:
+            self.metadata_keys = mtz_metadata_keys
 
     @staticmethod
     def _can_handle(input_files):
@@ -88,8 +92,6 @@ class MTZDataset(AbismalDataset):
             self.intensity_key = self._get_first_key_of_type(ds, "J")
         if self.sigma_key is None:
             self.sigma_key = self._get_first_key_of_type(ds, "Q")
-        if self.metadata_keys is None:
-            self.metadata_keys = self.__DEFAULT_METADATA_KEYS__
 
         ds.compute_dHKL(True).label_absences(True)
         ds = ds[(ds.dHKL >= self.dmin) & (~ds.ABSENT)]

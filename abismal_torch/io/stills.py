@@ -20,6 +20,7 @@ class StillsDataset(AbismalDataset):
             'xyzcal.px.1',
             #'xyzcal.px.2',
     ]
+    __HANDLER_TYPE__ = 'dials'
 
     @cellify
     @spacegroupify
@@ -32,6 +33,7 @@ class StillsDataset(AbismalDataset):
         wavelength: Optional[float] = None,
         rasu_id: Optional[int] = 0,
         dmin: Optional[float] = 0.,
+        dials_metadata_keys: Optional[List[str]] = None,
         **kwargs,
     ):
         """
@@ -54,6 +56,10 @@ class StillsDataset(AbismalDataset):
         self.dmin = dmin
         self.refl_file = refl_file
         self.expt_file = expt_file
+        if dials_metadata_keys is None:
+            self.metadata_keys = self.__DEFAULT_METADATA_KEYS__
+        else:
+            self.metadata_keys = dials_metadata_keys
 
     @staticmethod
     def _can_handle(input_files):
@@ -165,12 +171,10 @@ class StillsDataset(AbismalDataset):
         hkl = torch.tensor(ds[['H', 'K', 'L']].to_numpy('int32'))
         d = torch.tensor(ds['dHKL'].to_numpy('float32'))
         wavelength = torch.tensor(ds['wavelength'].to_numpy('float32'))
-        metadata_keys = self.__DEFAULT_METADATA_KEYS__
-        metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
+        metadata = torch.tensor(ds[self.metadata_keys].to_numpy('float32'))
         iobs  = torch.tensor(ds['intensity.sum.value'].to_numpy('float32'))
         sigiobs  = torch.tensor(np.sqrt(ds['intensity.sum.variance'].to_numpy('float32')))
-
-        metadata = torch.tensor(ds[metadata_keys].to_numpy('float32'))
+        
         self._tensor_data = {
             "image_id" : batch,
             "rasu_id" : rasu_id,

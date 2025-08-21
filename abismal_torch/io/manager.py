@@ -1,3 +1,4 @@
+from cgitb import handler
 from typing import Optional, Sequence, Mapping
 
 import lightning as L
@@ -34,8 +35,8 @@ def collate_fn(batch):
 
 class AbismalDataModule(L.LightningDataModule):
     handlers = {
-        'mtz' : MTZDataset,
-        'dials' : StillsDataset,
+        MTZDataset.__HANDLER_TYPE__ : MTZDataset,
+        StillsDataset.__HANDLER_TYPE__ : StillsDataset,
     }
     def __init__(
         self,
@@ -78,6 +79,7 @@ class AbismalDataModule(L.LightningDataModule):
             rasu_configs = [rasu_configs]
         self.anomalouss = {}
         self.datasets = []
+        _used_handler_types = set()
         for rasu_config in rasu_configs:
             # get the anomalous flag for rasu
             rasu_id = rasu_config.get('rasu_id', 0)
@@ -95,12 +97,29 @@ class AbismalDataModule(L.LightningDataModule):
                 if handler_type not in handler_type_2_input_files:
                     handler_type_2_input_files[handler_type] = []
                 handler_type_2_input_files[handler_type].append(input_file)
+            # construct the datasets for this rasu
+            _used_handler_types.update(handler_type_2_input_files.keys())
             for k, v in handler_type_2_input_files.items():
                 self.datasets.extend(AbismalDataModule.handlers[k].from_sequence(v, **rasu_config, **handler_kwargs))
 
-        if len(self.anomalouss) == max(self.anomalouss.keys()) + 1:
+        if len(self.anomalouss) != max(self.anomalouss.keys()) + 1:
             raise ValueError("rasu_ids must form contiguous sequence starting from 0.")
-        self.dataset = AbismalConcatDataset(self.datasets)
+        
+        # handle metadata keys for mixing handler types
+        _used_handler_types = sorted(_used_handler_types)
+        _used_handler_metadata_lengths = []
+        if len(_used_handler_types) > 1:
+            _used_handler_2_metadata_length = {
+                handler_type: len(AbismalDataModule.handlers[handler_type].__DEFAULT_METADATA_KEYS__)
+                for handler_type in _used_handler_types
+            }
+            for k, v in handler_kwargs.items():
+                if k.endswith('_metadata_keys'):
+                    handler_type = k.split('_metadata_keys')[0]
+                    _used_handler_2_metadata_length[handler_type] = len(v)
+            _used_handler_metadata_lengths = [_used_handler_2_metadata_length[handler_type] for handler_type in _used_handler_types]
+        
+        self.dataset = AbismalConcatDataset(self.datasets, _used_handler_types, _used_handler_metadata_lengths)
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.validation_fraction = validation_fraction

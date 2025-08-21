@@ -1,12 +1,15 @@
 from typing import Optional,List,Sequence,Union,Iterable
+import torch
 from torch.utils.data import Dataset,ConcatDataset
 from reciprocalspaceship.decorators import cellify,spacegroupify
 import numpy as np
 import gemmi
+import bisect
 
 
 class AbismalDataset(Dataset):
     __DEFAULT_METADATA_KEYS__ = []
+    __HANDLER_TYPE__ = None
 
     def __init__(
         self,
@@ -195,7 +198,9 @@ class AbismalConcatDataset(ConcatDataset):
     This is a subclass of torch.utils.data.ConcatDataset which is aware of the
     symmetry of AbismalDatasets.
     """
-    def __init__(self, datasets: List[Dataset]) -> None:
+    def __init__(self, datasets: List[Dataset], 
+                 handler_types: Optional[List[str]] = [], 
+                 handler_metadata_lengths: Optional[List[int]] = []) -> None:
         """
         Args:
             datasets (List[Dataset]): A list of AbismalDatasets, which can be longer
@@ -214,6 +219,18 @@ class AbismalConcatDataset(ConcatDataset):
         for ds in self.datasets:
             ds.cell = cells[ds.rasu_id]
             ds.spacegroup = spacegroups[ds.rasu_id]
+
+        self._handler_types = handler_types
+        self._handler_metadata_lengths = handler_metadata_lengths
+        self._zero_padding = False
+        if len(self._handler_types) > 1:
+            if len(self._handler_metadata_lengths) != len(self._handler_types):
+                raise ValueError("If mixing handler types, handler_types and handler_metadata_lengths must be the same length")
+            self._zero_padding = True
+
+        print("for each dataset, the metadata keys are:")
+        for ds in self.datasets:
+            print(ds.metadata_keys)
 
     @property
     def lengths(self):
@@ -252,3 +269,27 @@ class AbismalConcatDataset(ConcatDataset):
                 assert dmins[ds.rasu_id] == ds.dmin, f"Inconsistent dmins for rasu_id {ds.rasu_id}"
             dmins[ds.rasu_id] = ds.dmin
         return dmins
+    
+    def __getitem__(self, idx):
+        if idx < 0:
+            if -idx > len(self):
+                raise ValueError(
+                    "absolute value of index should not exceed dataset length"
+                )
+            idx = len(self) + idx
+        dataset_idx = bisect.bisect_right(self.cumulative_sizes, idx)
+        if dataset_idx == 0:
+            sample_idx = idx
+        else:
+            sample_idx = idx - self.cumulative_sizes[dataset_idx - 1]
+
+        sample = self.datasets[dataset_idx][sample_idx]
+        if self._zero_padding and (sample['metadata'].shape[1] != sum(self._handler_metadata_lengths)):
+            handler_idx = self._handler_types.index(self.datasets[dataset_idx].__HANDLER_TYPE__)
+            start_idx = sum(self._handler_metadata_lengths[:handler_idx])
+            end_idx = start_idx + self._handler_metadata_lengths[handler_idx]
+            num_reflections = sample['metadata'].shape[0]
+            _padded_metadata = torch.zeros((num_reflections, sum(self._handler_metadata_lengths)), dtype=sample['metadata'].dtype)
+            _padded_metadata[:,start_idx:end_idx] = sample['metadata']
+            sample['metadata'] = _padded_metadata
+        return sample
