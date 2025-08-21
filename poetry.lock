@@ -763,6 +763,22 @@ files = [
 six = ">=1.4.0"
 
 [[package]]
+name = "docstring-parser"
+version = "0.17.0"
+description = "Parse Python docstrings in reST, Google and Numpydoc format"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "docstring_parser-0.17.0-py3-none-any.whl", hash = "sha256:cf2569abd23dce8099b300f9b4fa8191e9582dda731fd533daf54c4551658708"},
+    {file = "docstring_parser-0.17.0.tar.gz", hash = "sha256:583de4a309722b3315439bb31d64ba3eebada841f2e2cee23b99df001434c912"},
+]
+
+[package.extras]
+dev = ["pre-commit (>=2.16.0)", "pydoctor (>=25.4.0)", "pytest"]
+docs = ["pydoctor (>=25.4.0)"]
+test = ["pytest"]
+
+[[package]]
 name = "editorconfig"
 version = "0.17.1"
 description = "EditorConfig File Locator and Interpreter for Python"
@@ -1055,39 +1071,48 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "gemmi"
-version = "0.7.1"
+version = "0.7.3"
 description = "library for structural biology"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "gemmi-0.7.1-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:fc55652d0930a2529b88ca2e78a665ba218ddc15d8f0ff25e6b2f6d98cc75169"},
-    {file = "gemmi-0.7.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b492d5cca2e6b508ba6090bd2ef1e4eefc7150a5a1eacb1d87ac08cf93e0c117"},
-    {file = "gemmi-0.7.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8f68dbc4da0d773c3e3c4921fcec9f66432bb31dff1c5d3bdf7d2e51f9ceff02"},
-    {file = "gemmi-0.7.1-cp310-cp310-win_amd64.whl", hash = "sha256:120b5654011458e445b8445d3b12dea1c7a3997f4bc3e0cceeefaea710d8d72e"},
-    {file = "gemmi-0.7.1-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:116d1f84eb3fe2e8b80a3d0736f10b9d946d207a79b8998211ef3207037f54aa"},
-    {file = "gemmi-0.7.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:3f8924cdf61b3467441289cb65a6af3d7752143ef8f0a350c055746d1bfca2d7"},
-    {file = "gemmi-0.7.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2cbabee2e1a9f5bcfc249e8383ba551f84e1cfd25ca1af5109bb8d8c867be9c3"},
-    {file = "gemmi-0.7.1-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:36b32f8b3b98ab6aa0b92a3d6d944bbb2ee2191f3607b2df966ad4799bddadf3"},
-    {file = "gemmi-0.7.1-cp311-cp311-win_amd64.whl", hash = "sha256:38fd01bf1e9373fbb18aa64a12ccec320204c4ffb2d37b0f650be55b5f674495"},
-    {file = "gemmi-0.7.1-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:3f4421a5e38ef3f1474b466f888c1517d813b99935aafe52f1da22053b1eb827"},
-    {file = "gemmi-0.7.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0388a02758c4d518d6be2a7313cf81b1292978658e24b655f1112ed3764826ff"},
-    {file = "gemmi-0.7.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a5935c5b5c510c223f9afad9261c268118d6dd63511f9dc8707e50b9ca771e78"},
-    {file = "gemmi-0.7.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:08080973b422602f6bd983ec2ff909601a283d358175bd84cbb8bf43d9eeeb4f"},
-    {file = "gemmi-0.7.1-cp312-cp312-win_amd64.whl", hash = "sha256:9aee1a50248c259c44aff20c3d1b3a246b00536279e22f24389e45674f9de5b3"},
-    {file = "gemmi-0.7.1-cp313-cp313-macosx_10_14_x86_64.whl", hash = "sha256:60afbd55b0f9909684f71e22915a3be6985bd6125d9056acc3531d3b83c6421a"},
-    {file = "gemmi-0.7.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:100a150da8f47db8e0c329ca87e5b4479292b33c6aee3529cd5a8451321a624f"},
-    {file = "gemmi-0.7.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e0a9358fec36cad3f9f55e5ca927e378bd48ded30522ae257153787b699ac303"},
-    {file = "gemmi-0.7.1-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:658ce0578eb966530f3733738130120e7305a0fa421349089279a0164ac24e23"},
-    {file = "gemmi-0.7.1-cp313-cp313-win_amd64.whl", hash = "sha256:402a71c935cab167ac6a7a29045e47a972388ef6f62fa3f477d8b0241fe53d4e"},
-    {file = "gemmi-0.7.1-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:a34418cfabbb9ccf366a312ab37a654b887568eedd46dbb1ca3aff84b76e84c8"},
-    {file = "gemmi-0.7.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:1feb244f8258df3b00c9b0fa28a5139da2a4a5e9f16ccda53f144d8fd8dad5e7"},
-    {file = "gemmi-0.7.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6099056dd3697f89f05c69a05ee22a570bd19eb04b744bff072c8476c3d7b244"},
-    {file = "gemmi-0.7.1-cp38-cp38-win_amd64.whl", hash = "sha256:9c92b5a4c3aff607f8d792822673866627acaee4ab54fda4eb0959b5452cbadd"},
-    {file = "gemmi-0.7.1-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:7d231c028402d3cbe77f0392bea7841497b29610b5ab53de894401757f34ffc2"},
-    {file = "gemmi-0.7.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:5a3fec96a92e3eea8e247eb0f4ffadea4ff9d9d0e15e8359cfb0084cb1b29113"},
-    {file = "gemmi-0.7.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:15b205df4d9848a62c3488fe43f25b55f7eb9c1735f4099deb334cd04b1d3170"},
-    {file = "gemmi-0.7.1-cp39-cp39-win_amd64.whl", hash = "sha256:08a22269b5487d889ed0fe63de6027a8b0767199437822d6d75c54ea6787bac5"},
-    {file = "gemmi-0.7.1.tar.gz", hash = "sha256:73bb4a2c574ef7586efdf0161aae22bb75c0301af5e9cc22252877e707facdd2"},
+    {file = "gemmi-0.7.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:74ae3e6210b8ffcf3fee6ef92b92bd2a27e13a7fe963e71974df823154f8bdd7"},
+    {file = "gemmi-0.7.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b42dbc353135f309da678e3f098b9cc9d8ac4d42170cc965324d1e76d120c92c"},
+    {file = "gemmi-0.7.3-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:138fe98af1344048559572266271cf190eff74de7a62ba500c522c2f1c86db6b"},
+    {file = "gemmi-0.7.3-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f11e635f94486947be2cc92826d661db9af09a30bf65b62a0d12b747ea15d573"},
+    {file = "gemmi-0.7.3-cp310-cp310-win_amd64.whl", hash = "sha256:c5bb65c0fe776ea4c7d48c252e14cd7facaecf6e76afffd1b158b31987b4f4f4"},
+    {file = "gemmi-0.7.3-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:b3abfa039583de0afdc18e513e2a9e5590193d5ecfff41a5d88a46c061e903d1"},
+    {file = "gemmi-0.7.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7e462792336c7d93d4e2bdb52b49f115f812f856d1467aa5824ddb4bb03885c8"},
+    {file = "gemmi-0.7.3-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:be1d445cbaa4fd270ae50fc97d03c89e65a69d607d7f8f8a38bb54c0eddc79f0"},
+    {file = "gemmi-0.7.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9c9c81629ab847851dfc163b41725acd77955213aca6c976c4bcc830547b4547"},
+    {file = "gemmi-0.7.3-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:d3fedb29619d9e10e7331bc6448de7278ec0fe760f632fdb9aa8931e7cdee936"},
+    {file = "gemmi-0.7.3-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:b3053234360241c9e04a689be8d053b878463659da5fa068903437f15758f347"},
+    {file = "gemmi-0.7.3-cp311-cp311-win_amd64.whl", hash = "sha256:c0d39acb44c552449a07f1056c7fd370e3781e2b9b0bf55b065df2079935d6ec"},
+    {file = "gemmi-0.7.3-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:0a60139ea88886fd157cd01e012cb091925996d5ee0a3b35d00bf0b78615e12f"},
+    {file = "gemmi-0.7.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:54850c1520a7fd7a4d7c8b1bfe173fa320b4c26803443a5b3860c20e2cd84116"},
+    {file = "gemmi-0.7.3-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:5ea52ad093cb3058d3ece1351a6fd3748879b1b00bdbd74316abc6829bfe85de"},
+    {file = "gemmi-0.7.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d58859b1e32ea996bc52f935c0ed9d55df757db7bb0307123024b9b4550168c5"},
+    {file = "gemmi-0.7.3-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:79d45e24b660114f85bb35e1bb7792caee18807e64f8b1e336e14925786d5dcd"},
+    {file = "gemmi-0.7.3-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:f396c3ff01ae970c6e1b927ab1222ab7e5cc98440d6bad69a30100c050446001"},
+    {file = "gemmi-0.7.3-cp312-cp312-win_amd64.whl", hash = "sha256:eea18786dd2ed3ae8457434bf038ff14b43149766a40a7c8ba77db4ad98b3428"},
+    {file = "gemmi-0.7.3-cp313-cp313-macosx_10_14_x86_64.whl", hash = "sha256:5a3b3bd9213577726ea2c2280150d05ee2c055d7f970ae2af9a5c0b7e0ec142c"},
+    {file = "gemmi-0.7.3-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:f4e721101db02e4a23f242d1f13767183d004ab31d4444c62445e6429d8a3fe8"},
+    {file = "gemmi-0.7.3-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:dc928bd4567effd55399714b7f99922d84d128b2f061ad499a81dd5b800c8742"},
+    {file = "gemmi-0.7.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8d1a3e18fb7ac33df4325a0e846cad7c613ec90df0499f579d6aba1ccc15796a"},
+    {file = "gemmi-0.7.3-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:b7c6f3450e36bb08b63c8e514e79f08ca1eb7c0d6963440d25b426d34749dfed"},
+    {file = "gemmi-0.7.3-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:84f1ec474c42c8ce5fc373a9efb1a875683c3c879b6bc68d180d9bb24b5fa2bf"},
+    {file = "gemmi-0.7.3-cp313-cp313-win_amd64.whl", hash = "sha256:ffcd45974f4f0f1eea212679697e01f5048842754af6daeb06128bf5df2929ce"},
+    {file = "gemmi-0.7.3-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:7a14f1ec141f3f866981633b6e19a2bf8ceea1a386a0ebe9e4bc1cd5a8962bfc"},
+    {file = "gemmi-0.7.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:d752f6dcfb82946ad592f2d02edae47092a61e5f9379626ebadad9fc26aa1f3f"},
+    {file = "gemmi-0.7.3-cp38-cp38-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f9db3006970d209861dc6b6723b3e15595454ab56bb92997a15516cd3a648bb9"},
+    {file = "gemmi-0.7.3-cp38-cp38-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:500b7d9ff82394fb1d9bd21d0561b4cc0e4a9bf3a1430699714fc2eb6dd30941"},
+    {file = "gemmi-0.7.3-cp38-cp38-win_amd64.whl", hash = "sha256:42dbfe4c49ef14a559fbdad1e2eeea0f6a4c7313cfb0fccff5d61107593e5003"},
+    {file = "gemmi-0.7.3-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:5a8b4bedae94b8f69a6c1094f8f9ed2dece03bf3a9625467ebe1235c4b7efff3"},
+    {file = "gemmi-0.7.3-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:70a5c54ec7afe72892c9602582f5d3b3d0de443fed99d32aebc72c8903e361fe"},
+    {file = "gemmi-0.7.3-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0de16b95b4385ad166050180c3c57f1b440276ff254f14ae15ef457dc79e9d52"},
+    {file = "gemmi-0.7.3-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:468de0c14c3dca709a83b8b15e4dcefefb0e6d07f9b5350678daa3a6ac7bef1c"},
+    {file = "gemmi-0.7.3-cp39-cp39-win_amd64.whl", hash = "sha256:a1ed5359f94bf60c296d97cfd65fb2528283d237d63d92e36bcc8bdc7fd1f9e6"},
+    {file = "gemmi-0.7.3.tar.gz", hash = "sha256:32069b111216aad58a9724640fb23a31309c15a1aaf16164b4c9addc3677fadb"},
 ]
 
 [[package]]
@@ -1180,6 +1205,25 @@ files = [
 
 [package.extras]
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
+
+[[package]]
+name = "importlib-resources"
+version = "6.5.2"
+description = "Read resources from Python packages"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec"},
+    {file = "importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c"},
+]
+
+[package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["jaraco.test (>=5.4)", "pytest (>=6,!=8.1.*)", "zipp (>=3.17)"]
+type = ["pytest-mypy"]
 
 [[package]]
 name = "iniconfig"
@@ -1328,6 +1372,43 @@ files = [
 [package.dependencies]
 editorconfig = ">=0.12.2"
 six = ">=1.13.0"
+
+[[package]]
+name = "jsonargparse"
+version = "4.40.2"
+description = "Implement minimal boilerplate CLIs derived from type hints and parse from command line, config files and environment variables."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "jsonargparse-4.40.2-py3-none-any.whl", hash = "sha256:94c770c383786513355a176e093dee9fdef21d7afab837789106af17e307eae3"},
+    {file = "jsonargparse-4.40.2.tar.gz", hash = "sha256:91e775b4ffba72bc5bbdab39d2f3efeb8ca84285def706d534edeed621cf0cb7"},
+]
+
+[package.dependencies]
+docstring-parser = {version = ">=0.17", optional = true, markers = "extra == \"signatures\""}
+PyYAML = ">=3.13"
+typeshed-client = {version = ">=2.8.2", optional = true, markers = "python_version >= \"3.9\" and extra == \"signatures\""}
+
+[package.extras]
+all = ["jsonargparse[fsspec]", "jsonargparse[jsonnet]", "jsonargparse[jsonschema]", "jsonargparse[omegaconf]", "jsonargparse[reconplogger]", "jsonargparse[ruyaml]", "jsonargparse[signatures]", "jsonargparse[toml]", "jsonargparse[typing-extensions]", "jsonargparse[urls]"]
+argcomplete = ["argcomplete (>=3.5.1)"]
+coverage = ["jsonargparse[test-no-urls]", "pytest-cov (>=4.0.0)"]
+dev = ["build (>=0.10.0)", "jsonargparse[coverage]", "jsonargparse[doc]", "jsonargparse[test]", "pre-commit (>=2.19.0)", "tox (>=3.25.0)"]
+doc = ["Sphinx (>=1.7.9)", "autodocsumm (>=0.1.10)", "sphinx-autodoc-typehints (>=1.19.5)", "sphinx-rtd-theme (>=1.2.2)"]
+fsspec = ["fsspec (>=0.8.4)"]
+jsonnet = ["jsonnet (>=0.21.0)"]
+jsonschema = ["jsonschema (>=3.2.0)"]
+maintainer = ["bump2version (>=0.5.11)", "twine (>=4.0.2)"]
+omegaconf = ["omegaconf (>=2.1.1)"]
+reconplogger = ["reconplogger (>=4.4.0)"]
+ruyaml = ["ruyaml (>=0.20.0)"]
+shtab = ["shtab (>=1.7.1)"]
+signatures = ["docstring-parser (>=0.17)", "jsonargparse[typing-extensions]", "typeshed-client (>=2.3.0)", "typeshed-client (>=2.8.2)"]
+test = ["attrs (>=22.2.0)", "jsonargparse[argcomplete]", "jsonargparse[shtab]", "jsonargparse[test-no-urls]", "pydantic (>=2.3.0)", "responses (>=0.12.0)", "types-PyYAML (>=6.0.11)", "types-requests (>=2.28.9)"]
+test-no-urls = ["pytest (>=6.2.5)", "pytest-subtests (>=0.8.0)"]
+toml = ["toml (>=0.10.2)"]
+typing-extensions = ["typing-extensions (>=3.10.0.0)"]
+urls = ["requests (>=2.18.4)"]
 
 [[package]]
 name = "jupyter-client"
@@ -3957,6 +4038,21 @@ tests = ["autopep8", "isort", "llnl-hatchet", "numpy", "pytest", "pytest-forked"
 tutorials = ["matplotlib", "pandas", "tabulate"]
 
 [[package]]
+name = "typeshed-client"
+version = "2.8.2"
+description = "A library for accessing stubs in typeshed."
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "typeshed_client-2.8.2-py3-none-any.whl", hash = "sha256:4cf886d976c777689cd31889f13abf5bfb7797c82519b07e5969e541380c75ee"},
+    {file = "typeshed_client-2.8.2.tar.gz", hash = "sha256:9d8e29fb74574d87bf9a719f77131dc40f2aeea20e97d25d4a3dc2cc30debd31"},
+]
+
+[package.dependencies]
+importlib_resources = ">=1.4.0"
+typing-extensions = ">=4.5.0"
+
+[[package]]
 name = "typing-extensions"
 version = "4.14.1"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -4252,4 +4348,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "4ca70b869661ead4e3a45af01ced67c16a49bebf08078a8679fdd1cc28cc7a34"
+content-hash = "8f4063e4d1045b000bc2fc4517da3ea49c01d5bde7615c251fcd45fbf94e2087"
