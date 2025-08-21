@@ -1,0 +1,88 @@
+trainer:
+  default_root_dir: /Users/mai12345/Desktop/abismal_torch/tmp_outdir
+  max_steps: 30
+  deterministic: true
+  log_every_n_steps: 1
+  check_val_every_n_epoch: 1
+  # logger:
+  #   class_path: lightning.pytorch.loggers.WandbLogger
+  #   init_args:
+  #     project: "abismal_torch"
+  #     name: "my_test_run"
+  #     save_dir: null # will be set as the mtz output directory supplied by user'
+  # callbacks:
+  #   - class_path: lightning.pytorch.callbacks.early_stopping.EarlyStopping
+  #     init_args:
+  #       monitor: "val_loss"
+  #       min_delta: 0.5
+  #       patience: 2
+    # - class_path: abismal_torch.callbacks.plotF.PosteriorPlotter
+    #   init_args:
+    #     save_every_n_epoch: 2
+
+data:
+  num_workers: 0
+  persistent_workers: false
+
+# # Single MTZ file -- tested
+# data:
+#   rasu_configs:
+#     - rasu_id: 0
+#       dmin: 2.0
+#       input_files: /Users/mai12345/Desktop/unmerged.mtz
+
+# # Single ASU Dials file -- tested
+# data:
+#   rasu_configs:
+#     - rasu_id: 0
+#       dmin: 2.0
+#       input_files: 
+#         - tests/data/dials.expt
+#         - tests/data/dials.refl
+#       cell: [40, 50, 60, 90.0, 90.0, 90.0]
+#       spacegroup: "P212121"
+#       anomalous: true
+#   handler_kwargs:
+#     intensity_key: "IPR"
+#     sigma_key: "SIGIPR"
+#     dials_metadata_keys: ["dHKL", "s1.0", "s1.1", "s1.2"]
+
+# # Single ASU + Multiple file types -- tested
+# data:
+#   rasu_configs:
+#     - rasu_id: 0
+#       dmin: 1.5
+#       input_files: 
+#         - /Users/mai12345/Desktop/unmerged.mtz
+#         - tests/data/dials.expt
+#         - tests/data/dials.refl
+#       cell: [40, 50, 60, 90.0, 90.0, 90.0]
+#       spacegroup: "P212121"
+#       anomalous: true
+
+# Multiple ASUs + Different file types across ASUs
+data:
+  rasu_configs:
+    - rasu_id: 0
+      dmin: 1.5
+      input_files: /Users/mai12345/Desktop/unmerged.mtz
+    - rasu_id: 1
+      dmin: 2.0
+      input_files: 
+        - tests/data/dials.refl
+        - tests/data/dials.expt
+  handler_kwargs:
+    intensity_key: "IPR"
+    sigma_key: "SIGIPR"
+    dials_metadata_keys:
+      - "dHKL"
+      - "s1.0"
+      - "s1.1"
+      - "s1.2"
+    mtz_metadata_keys:
+      - "YDET"
+      - "IPR"
+
+seed_everything: 42
+mtz_output:
+  save_every_n_epoch: 2
