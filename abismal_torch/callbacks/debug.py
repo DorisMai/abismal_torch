@@ -24,7 +24,7 @@ class DatasetLogger(L.Callback):
             print("=== Dataset Information ===")
             logger.info("=== Dataset Information ===")
             logger.info(f"Total datasets: {len(datamodule.dataset.datasets)}")
-            logger.info(f"Total length: {len(datamodule.dataset)}")
+            logger.info(f"Total number of images: {len(datamodule.dataset)}")
 
             logger.info("Metadata keys for each dataset:")
             for i, ds in enumerate(datamodule.dataset.datasets):
@@ -32,7 +32,7 @@ class DatasetLogger(L.Callback):
                     f"  Dataset {i} ({ds.__class__.__name__}): {ds.metadata_keys}"
                 )
                 logger.info(f"    - Handler type: {ds.__HANDLER_TYPE__}")
-                logger.info(f"    - Length: {len(ds)}")
+                logger.info(f"    - Number of images: {len(ds)}")
                 logger.info(f"    - RASU ID: {ds.rasu_id}")
 
             logger.info("=== End Dataset Information ===")

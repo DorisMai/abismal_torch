@@ -2,6 +2,8 @@ import os
 from typing import Optional
 
 import lightning.pytorch as L
+import matplotlib
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 import torch
 

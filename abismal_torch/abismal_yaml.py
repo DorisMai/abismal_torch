@@ -217,8 +217,10 @@ class MyCLI(LightningCLI):
 
 def main():
     import os
-
-    config_dir = "abismal_torch/command_line/configs"
+    from pathlib import Path
+    module_dir = Path(__file__).parent
+    config_dir = os.path.join(module_dir, "command_line/configs")
+    print(config_dir, flush=True)
     # cli = MyCLI(
     #     AbismalLitModule,
     #     MTZDataModule,
