@@ -1,6 +1,6 @@
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
-import rs_distributions.modules as rsm
+from rs_distributions import distributions as rsd
 import torch
 import torch.distributions as td
 import torch.nn as nn
@@ -21,6 +21,9 @@ class ImageScaler(nn.Module):
         scaling_posterior: Optional[
             str | type[torch.distributions.Distribution]
         ] = td.Normal,
+        scaling_posterior_transform: Optional[
+            str | type[torch.distributions.transforms.Transform]
+        ] = 'SoftplusTransform',
         scaling_kl_weight: Optional[float] = 0.01,
         scaling_prior: Optional[
             str | type[torch.distributions.Distribution]
@@ -70,9 +73,22 @@ class ImageScaler(nn.Module):
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
         self.scale_linear_in = CustomInitLazyLinear(mlp_width)
         if isinstance(scaling_posterior, str):
-            self.scaling_posterior = getattr(td, scaling_posterior)
+            if hasattr(rsd, scaling_posterior):
+                self.scaling_posterior = getattr(rsd, scaling_posterior)
+            else:
+                self.scaling_posterior = getattr(td, scaling_posterior)
         else:
             self.scaling_posterior = scaling_posterior
+        if isinstance(scaling_posterior_transform, str):
+            self._transform = getattr(td.transforms, scaling_posterior_transform)
+        else:
+            self._transform = scaling_posterior_transform
+        self.posterior_positive_transform = torch.distributions.ComposeTransform(
+            [
+                self._transform(),
+                td.AffineTransform(epsilon, 1.0),
+            ]
+        )
         self._num_posterior_args = len(self.scaling_posterior.arg_constraints)
         self.linear_out = CustomInitLazyLinear(self._num_posterior_args)
         self.pool = ImageAverage()
@@ -97,20 +113,44 @@ class ImageScaler(nn.Module):
                 activation=activation,
             )
         self.scaling_kl_weight = scaling_kl_weight
-        self.epsilon = epsilon
         self.register_buffer(
             "scaling_prior_params",
             torch.tensor(scaling_prior_params, dtype=torch.float32),
         )
         self._scaling_prior = scaling_prior
 
-    def init_scaling_prior(self, reference_data: torch.Tensor) -> None:
+    def _init_scaling_prior(self) -> None:
         if isinstance(self._scaling_prior, str):
-            self.scaling_prior = getattr(td, self._scaling_prior)(
+            if hasattr(rsd, self._scaling_prior):
+                self.scaling_prior = getattr(rsd, self._scaling_prior)(
+                    *self.scaling_prior_params
+                )
+            else:
+                self.scaling_prior = getattr(td, self._scaling_prior)(
                 *self.scaling_prior_params
             )
         else:
             self.scaling_prior = self._scaling_prior(*self.scaling_prior_params)
+
+    def _apply_posterior_positive_transforms(
+        self, raw_params: torch.Tensor
+    ) -> tuple[torch.Tensor, ...]:
+        """
+        Enforce positivity on any posterior argument whose constraint is
+        GreaterThan(0).
+        """
+        transformed_args: list[torch.Tensor] = []
+        for idx, (arg_name, constraint) in enumerate(self.scaling_posterior.arg_constraints.items()):
+            param = raw_params[..., idx]
+            if (
+                isinstance(constraint, td.constraints._GreaterThan)
+                or isinstance(constraint, td.constraints._GreaterThanEq)
+            ):
+                if constraint.lower_bound == 0:
+                    param = self.posterior_positive_transform(param)
+                    # print(f"param {arg_name}: {param}", flush=True)
+            transformed_args.append(param)
+        return tuple(transformed_args)
 
     def _create_image(self, inputs: dict[str, torch.Tensor]) -> torch.Tensor:
         """
@@ -175,20 +215,23 @@ class ImageScaler(nn.Module):
         # loc, scale = scaling_params.unbind(dim=-1)
         # scale = torch.nn.functional.softplus(scale) + self.epsilon
         # print(f"scaling_params shape: {scaling_params.shape}", flush=True)
-        scale = scaling_params[..., -1]
-        scale = torch.nn.functional.softplus(scale) + self.epsilon
-        if self._num_posterior_args == 1:
-            q = self.scaling_posterior(scale.squeeze(-1))
-        else:
-            loc, _ = scaling_params.unbind(dim=-1)
-            q = self.scaling_posterior(loc, scale)
+
+        # scale = scaling_params[..., -1]
+        # scale = torch.nn.functional.softplus(scale) + self.epsilon
+        # if self._num_posterior_args == 1:
+        #     q = self.scaling_posterior(scale.squeeze(-1))
+        # else:
+        #     loc, _ = scaling_params.unbind(dim=-1)
+        #     q = self.scaling_posterior(loc, scale)
+        transformed_scaling_params = self._apply_posterior_positive_transforms(scaling_params)
+        q = self.scaling_posterior(*transformed_scaling_params)
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
         # print(f"z shape: {z.shape}", flush=True)
         if not hasattr(self, "scaling_prior"):
-            self.init_scaling_prior(scaling_params)
+            self._init_scaling_prior()
         p = self.scaling_prior.expand((len(scaling_params),))
         kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
         return {
             "z": torch.t(z),  # Shape (n_reflns, mc_samples)
-            "kl_div": kl_div,
-        }  # Shape (n_reflns,)
+            "kl_div": kl_div, # Shape (n_reflns,)
+        }
