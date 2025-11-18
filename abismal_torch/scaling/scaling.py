@@ -73,8 +73,8 @@ class ImageScaler(nn.Module):
             self.scaling_posterior = getattr(td, scaling_posterior)
         else:
             self.scaling_posterior = scaling_posterior
-        num_distribution_args = len(self.scaling_posterior.arg_constraints)
-        self.linear_out = CustomInitLazyLinear(num_distribution_args)
+        self._num_posterior_args = len(self.scaling_posterior.arg_constraints)
+        self.linear_out = CustomInitLazyLinear(self._num_posterior_args)
         self.pool = ImageAverage()
         self.share_weights = share_weights
         self.mlp = MLP(
@@ -169,13 +169,21 @@ class ImageScaler(nn.Module):
         scale_embeddings = self.scale_mlp(
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
-        scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, 2)
+        scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, _num_posterior_args)
 
         # softplus transform
-        loc, scale = scaling_params.unbind(dim=-1)
+        # loc, scale = scaling_params.unbind(dim=-1)
+        # scale = torch.nn.functional.softplus(scale) + self.epsilon
+        # print(f"scaling_params shape: {scaling_params.shape}", flush=True)
+        scale = scaling_params[..., -1]
         scale = torch.nn.functional.softplus(scale) + self.epsilon
-        q = self.scaling_posterior(loc, scale)
+        if self._num_posterior_args == 1:
+            q = self.scaling_posterior(scale.squeeze(-1))
+        else:
+            loc, _ = scaling_params.unbind(dim=-1)
+            q = self.scaling_posterior(loc, scale)
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
+        # print(f"z shape: {z.shape}", flush=True)
         if not hasattr(self, "scaling_prior"):
             self.init_scaling_prior(scaling_params)
         p = self.scaling_prior.expand((len(scaling_params),))
