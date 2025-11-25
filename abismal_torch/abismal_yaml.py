@@ -140,6 +140,14 @@ class AbismalLitModule(L.LightningModule):
         for name, norm in norms.items():
             self.log(f"grad_norm/{name}", norm)
 
+        metadata_mean = self.merging_model.standardize_metadata.running_mean
+        metadata_var = self.merging_model.standardize_metadata.running_var
+        for i in range(metadata_mean.shape[0]):
+            self.log(f"running_stats/metadata_mean/{i}", metadata_mean[i])
+            self.log(f"running_stats/metadata_var/{i}", metadata_var[i])
+        self.log(f"running_stats/intensity_mean", self.merging_model.standardize_intensity.running_mean)
+        self.log(f"running_stats/intensity_var", self.merging_model.standardize_intensity.running_var)
+
         return loss
 
     def validation_step(self, batch, batch_idx):

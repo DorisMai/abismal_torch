@@ -92,7 +92,7 @@ class FeedForward(nn.Module):
             self.hidden_units = 2 * self.input_size
         self.activation = activation or "ReLU"
         self.activation = getattr(nn.modules.activation, self.activation)()
-        self.normalization = normalization or "identity"
+        self.normalization = normalization or "RMSNorm"
         self.epsilon = epsilon
         self.dropout = dropout
         self.linear1 = CustomInitLazyLinear(
@@ -150,7 +150,7 @@ class FeedForward_GLU(nn.Module):
             hidden_units (int, optional): Size of the hidden layer. Defaults to 4/3 times
                 the input size to keep same number of parameters as the FFN without GLU.
             activation (str): Activation function to use. Only supports one of the following:
-                'SwiGLU' (default), 'GEGLU', 'ReGLU', 'GLU', or 'Bilinear'.
+                'SwiGLU' (default), 'GEGLU', 'ReGLU', 'GLU', or 'Bilinear'. Defaults to 'SwiGLU'.
             dropout (float, optional): Dropout rate to apply after the second linear layer.
                 Defaults to None.
             normalization (str): Normalization function to use. Only supports 'RMSNorm' and 
@@ -163,7 +163,7 @@ class FeedForward_GLU(nn.Module):
         super().__init__(**kwargs)
         self.activation = activation or "SwiGLU"
         self.dropout = dropout
-        self.normalization = normalization or "identity"
+        self.normalization = normalization or "RMSNorm"
         self.input_size = input_size
         self.hidden_units = hidden_units
         if self.hidden_units is None:
@@ -210,7 +210,7 @@ class MLP(nn.Sequential):
             depth (int): Number of feedforward modules.
             input_layer (bool): Whether to have an input linear layer at the beginning.
             use_glu (bool): Whether to use GLU activation in the feedforward modules.
-            **kwargs: Keyword arguments for FeedForward.
+            **kwargs: Keyword arguments for FeedForward or FeedForward_GLU class.
         """
         layers = []
         if input_layer:

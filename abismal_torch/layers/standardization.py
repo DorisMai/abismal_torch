@@ -52,9 +52,9 @@ class WelfordStandardization(torch.nn.modules.batchnorm._NormBase):
     def __init__(
         self,
         num_features,
-        epsilon: Optional[float] = 1e-9,
-        center: Optional[bool] = True,
-        track_running_stats: Optional[bool] = True,
+        epsilon: float = 1e-9,
+        center: bool = True,
+        track_running_stats: bool = True,
     ):
         """
         Standardization layer using Welford's algorithm to track running mean and variance.
@@ -183,10 +183,10 @@ class MovingStandardization(torch.nn.Module):
     def __init__(
         self,
         num_features,
-        epsilon: Optional[float] = 1e-9,
-        center: Optional[bool] = True,
-        track_running_stats: Optional[bool] = True,
-        decay: Optional[float] = 0.999,
+        epsilon: float = 1e-9,
+        center: bool = True,
+        track_running_stats: bool = True,
+        decay: float = 0.999,
         device=None,
         dtype=None,
     ) -> None:

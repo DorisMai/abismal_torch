@@ -18,6 +18,7 @@ class ImageScaler(nn.Module):
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
         activation: Optional[str] = None,
+        normalization: Optional[str] = "RMSNorm",
         scaling_posterior: Optional[
             str | type[torch.distributions.Distribution]
         ] = td.Normal,
@@ -27,7 +28,7 @@ class ImageScaler(nn.Module):
         scaling_kl_weight: Optional[float] = 0.01,
         scaling_prior: Optional[
             str | type[torch.distributions.Distribution]
-        ] = td.Laplace,
+        ] = td.Cauchy,
         scaling_prior_params: Optional[tuple] = (0.0, 1.0),
         epsilon: Optional[float] = 1e-12,
         **kwargs
@@ -60,11 +61,11 @@ class ImageScaler(nn.Module):
             hidden_units (int, optional): int, see FeedForward argument.
             use_glu (bool, optional): bool, see MLP argument.
             scaling_posterior (torch.distributions.Distribution, optional): distribution class for
-                the scaling posterior distribution. Defaults to a Gamma distribution.
+                the scaling posterior distribution. Defaults to a normal distribution.
             scaling_kl_weight (float, optional): float, the weight of the KL divergence
                 loss between the scaling posterior and the scaling prior. Defaults to 0.01.
             scaling_prior (torch.distributions.Distribution, optional): instantiated distribution
-                for the scaling prior. Defaults to a Laplace distribution with mean 0.0 and
+                for the scaling prior. Defaults to a Cauchy distribution with mean 0.0 and
                 scale 1.0.
             epsilon (float, optional): float, the epsilon value for numerical stability.
                 Defaults to 1e-12.
@@ -100,6 +101,8 @@ class ImageScaler(nn.Module):
             hidden_units=hidden_units,
             use_glu=use_glu,
             activation=activation,
+            normalization=normalization,
+            epsilon=epsilon ** 0.5, # sqrt as used in std for normalization
         )
         if share_weights:
             self.scale_mlp = self.mlp
@@ -111,6 +114,8 @@ class ImageScaler(nn.Module):
                 hidden_units=hidden_units,
                 use_glu=use_glu,
                 activation=activation,
+                normalization=normalization,
+                epsilon=epsilon ** 0.5,
             )
         self.scaling_kl_weight = scaling_kl_weight
         self.register_buffer(
@@ -148,7 +153,6 @@ class ImageScaler(nn.Module):
             ):
                 if constraint.lower_bound == 0:
                     param = self.posterior_positive_transform(param)
-                    # print(f"param {arg_name}: {param}", flush=True)
             transformed_args.append(param)
         return tuple(transformed_args)
 
@@ -211,22 +215,9 @@ class ImageScaler(nn.Module):
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, _num_posterior_args)
 
-        # softplus transform
-        # loc, scale = scaling_params.unbind(dim=-1)
-        # scale = torch.nn.functional.softplus(scale) + self.epsilon
-        # print(f"scaling_params shape: {scaling_params.shape}", flush=True)
-
-        # scale = scaling_params[..., -1]
-        # scale = torch.nn.functional.softplus(scale) + self.epsilon
-        # if self._num_posterior_args == 1:
-        #     q = self.scaling_posterior(scale.squeeze(-1))
-        # else:
-        #     loc, _ = scaling_params.unbind(dim=-1)
-        #     q = self.scaling_posterior(loc, scale)
         transformed_scaling_params = self._apply_posterior_positive_transforms(scaling_params)
         q = self.scaling_posterior(*transformed_scaling_params)
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
-        # print(f"z shape: {z.shape}", flush=True)
         if not hasattr(self, "scaling_prior"):
             self._init_scaling_prior()
         p = self.scaling_prior.expand((len(scaling_params),))

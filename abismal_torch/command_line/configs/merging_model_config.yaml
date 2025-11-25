@@ -28,9 +28,11 @@ model:
       mlp_depth: 20
       use_glu: false
       activation: null # type: str, default: "SwiGLU" if use_glu is true, otherwise "ReLU"
+      normalization: RMSNorm
       share_weights: false
       epsilon: 1e-12 # for numerical stability
       scaling_kl_weight: 1
+      scaling_posterior_transform: SoftplusTransform
       scaling_posterior: Normal
-      scaling_prior: Laplace
+      scaling_prior: Cauchy
       scaling_prior_params: [0.0, 1.0] # parameters for the scaling prior distribution
