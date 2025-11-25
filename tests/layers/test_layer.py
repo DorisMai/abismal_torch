@@ -4,8 +4,8 @@ import torch
 import torch.nn.init as init
 
 from abismal_torch.layers import *
-from abismal_torch.layers.feedforward import (CustomInitLazyLinear,
-                                              FeedForward_GLU)
+# from abismal_torch.layers.feedforward import (CustomInitLazyLinear,
+#                                               FeedForward_GLU)
 from abismal_torch.scaling import ImageScaler
 
 
@@ -103,10 +103,10 @@ def test_lazylinear_init(linear_out_size, seed, data):
 
 
 @pytest.mark.parametrize(
-    "dropout, hidden_units, activation, normalize",
-    [(None, None, "ReLU", False), (0.2, 12, "SELU", True)],
+    "dropout, hidden_units, activation, normalization",
+    [(None, None, "ReLU", None), (0.2, 12, "SELU", "RMSNorm")],
 )
-def test_feedforward_shape(data_params, dropout, hidden_units, activation, normalize):
+def test_feedforward_shape(data_params, dropout, hidden_units, activation, normalization):
     data = torch.rand(
         data_params["n_image"],
         data_params["n_refln"],
@@ -118,7 +118,7 @@ def test_feedforward_shape(data_params, dropout, hidden_units, activation, norma
         hidden_units=hidden_units,
         dropout=dropout,
         activation=activation,
-        normalize=normalize,
+        normalization=normalization,
     )
     out = ff(data)
     assert out.shape == (
@@ -149,7 +149,7 @@ def test_mlp_shape(data_params, hidden_units):
         "depth": 6,
         "input_layer": True,
         "dropout": 0.1,
-        "normalize": True,
+        "normalization": "LayerNorm",
         "use_glu": False,
         "activation": "GELU",
         "weight_initializer": torch.nn.init.ones_,

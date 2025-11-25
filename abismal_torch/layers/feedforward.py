@@ -6,6 +6,12 @@ import torch.nn.functional as F
 
 from .initializers import VarianceScalingNormalInitializer
 
+NORMALIZER_DICT = {
+    "RMSNorm": lambda s, x: x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + s.epsilon),
+    "LayerNorm": lambda s, x: (x - x.mean(-1, keepdim=True)) / (x.std(-1, keepdim=True) + s.epsilon),
+    "activation": lambda s, x: s.activation(x),
+    "identity": lambda s, x: x,
+}
 
 class CustomInitLazyLinear(nn.LazyLinear):
     def __init__(
@@ -44,17 +50,18 @@ class FeedForward(nn.Module):
         self,
         input_size: int,
         hidden_units: Optional[int] = None,
-        activation: Optional[str | nn.Module] = "ReLU",
+        activation: Optional[str] = "ReLU",
         dropout: Optional[float] = None,
-        normalize: Optional[bool] = False,
+        normalization: Optional[str] = "RMSNorm",
         weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
         bias_initializer: Optional[nn.Module] = nn.init.zeros_,
+        epsilon: Optional[float] = 1e-6,
         **kwargs,
     ) -> None:
         """
         This is a ResNet version 2 style feedforward layer. It implements the following
         ```
-        out = dropout(linear(activation(hidden_linear(activation(layer_norm(in)))))) + in
+        out = dropout(linear(activation(hidden_linear(activation or norm(in)))))) + in
         ```
         Where dropout and layer normalization are optional, and the linear layers are
         initialized with variance scaling.
@@ -65,26 +72,29 @@ class FeedForward(nn.Module):
                 Defaults to None.
             hidden_units (int, optional): Size of the hidden layer. Defaults to 2 times
                 the input size.
-            activation (str | nn.Module, optional): Activation function to use. If a string,
+            activation (str | nn.Module): Activation function to use. If a string,
                 it should be the name of a PyTorch activation function. Otherwise, it should
                 be an instance of a nn.Module. Defaults to 'ReLU'.
-            normalize (bool): Whether to apply layer normalization. Defaults to False.
+            normalization (str, optional): Normalization function to use. Only 'RMSNorm' and 
+                'LayerNorm' are supported. You can also replace with "activation" to use the 
+                same activation function or "identity" to skip normalization. Defaults to 'RMSNorm'.
             weight_initializer (nn.Module, optional): Weight initializer. Defaults to
                 VarianceScalingNormalInitializer with default parameters.
             bias_initializer (nn.Module, optional): Bias initializer. Defaults to
                 nn.init.zeros_.
+            epsilon (float, optional): Epsilon value for the normalization functions. Defaults to
+                1e-6.
         """
         super().__init__(**kwargs)
         self.input_size = input_size
         self.hidden_units = hidden_units
         if self.hidden_units is None:
             self.hidden_units = 2 * self.input_size
-        if isinstance(activation, str):
-            self.activation = getattr(nn.modules.activation, activation)()
-        elif activation is None:
-            self.activation = nn.modules.activation.ReLU()
-        else:
-            self.activation = activation
+        self.activation = activation or "ReLU"
+        self.activation = getattr(nn.modules.activation, self.activation)()
+        self.normalization = normalization or "identity"
+        self.epsilon = epsilon
+        self.dropout = dropout
         self.linear1 = CustomInitLazyLinear(
             self.hidden_units, weight_initializer, bias_initializer
         )
@@ -92,32 +102,39 @@ class FeedForward(nn.Module):
             self.input_size, weight_initializer, bias_initializer
         )
 
-        self.network = nn.Sequential()
-        if normalize:
-            self.network.append(nn.LayerNorm(input_size))
-        self.network.append(self.activation)
-        self.network.append(self.linear1)
-        self.network.append(self.activation)
-        self.network.append(self.linear2)
-        if dropout is not None:
-            self.network.append(nn.Dropout(dropout))
+    def normalize(self, x: torch.Tensor) -> torch.Tensor:
+        return NORMALIZER_DICT[self.normalization](self, x)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_in = x
-        x = self.network(x)
-        return x + x_in
+        out = self.linear1(self.normalize(x))
+        out = self.linear2(self.activation(out))
+        if self.dropout is not None:
+            out = F.dropout(out, self.dropout)
+        out = out + x_in
+        return out
 
 
 class FeedForward_GLU(nn.Module):
+
+    ACTIVATION_DICT = {
+        "SwiGLU": lambda h1, h2: F.silu(h1) * h2,
+        "GEGLU": lambda h1, h2: F.gelu(h1) * h2,
+        "ReGLU": lambda h1, h2: F.relu(h1) * h2,
+        "GLU": lambda h1, h2: F.sigmoid(h1) * h2,
+        "Bilinear": lambda h1, h2: h1 * h2,
+    }
+
     def __init__(
         self,
         input_size: int,
         hidden_units: Optional[int] = None,
-        activation: Optional[str | nn.Module] = "SwiGLU",
+        activation: Optional[str] = "SwiGLU",
         dropout: Optional[float] = None,
-        normalize: Optional[bool] = False,
+        normalization: Optional[str] = "RMSNorm",
         weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
         bias_initializer: Optional[nn.Module] = None,
+        epsilon: Optional[float] = 1e-6,
         **kwargs,
     ) -> None:
         """
@@ -132,26 +149,26 @@ class FeedForward_GLU(nn.Module):
             input_size (int): Size of input features, i.e. last dimension of input tensor.
             hidden_units (int, optional): Size of the hidden layer. Defaults to 4/3 times
                 the input size to keep same number of parameters as the FFN without GLU.
-            activation (str | nn.Module, optional): Activation function to use. If a string,
-                it should be one of the following: 'SwiGLU' (default), 'GEGLU', 'ReGLU',
-                'GLU', or 'Bilinear'. Otherwise, it should be an instance of a nn.Module
-                that takes two tensors as input.
+            activation (str): Activation function to use. Only supports one of the following:
+                'SwiGLU' (default), 'GEGLU', 'ReGLU', 'GLU', or 'Bilinear'.
             dropout (float, optional): Dropout rate to apply after the second linear layer.
                 Defaults to None.
-            normalize (bool): Whether to apply layer normalization. Defaults to False.
+            normalization (str): Normalization function to use. Only supports 'RMSNorm' and 
+                'LayerNorm'. You can also replace with "activation" to use the same activation
+                function or "identity" to skip normalization. Defaults to 'RMSNorm'.
             weight_initializer (nn.Module, optional): Weight initializer. Defaults to
                 VarianceScalingNormalInitializer with default parameters.
             bias_initializer (nn.Module, optional): Bias initializer. Defaults to None.
         """
         super().__init__(**kwargs)
-        self.activation = activation
+        self.activation = activation or "SwiGLU"
         self.dropout = dropout
-        self.normalize = normalize
+        self.normalization = normalization or "identity"
         self.input_size = input_size
         self.hidden_units = hidden_units
         if self.hidden_units is None:
             self.hidden_units = int(4 / 3 * self.input_size)
-
+        self.epsilon = epsilon
         linear_params = {
             "weight_initializer": weight_initializer,
             "bias_initializer": bias_initializer,
@@ -161,41 +178,18 @@ class FeedForward_GLU(nn.Module):
         self.V = CustomInitLazyLinear(self.hidden_units, **linear_params)
         self.W2 = CustomInitLazyLinear(self.input_size, **linear_params)
 
-    def _get_activation(self, h1: torch.Tensor, h2: torch.Tensor) -> torch.Tensor:
-        """
-        Get the activation function for the GLU.
-
-        Args:
-            h1 (torch.Tensor): comes from xW, shape (batch_size, hidden_units)
-            h2 (torch.Tensor): comes from xV, shape (batch_size, hidden_units)
-
-        Returns:
-            torch.Tensor: Activated tensor of shape (batch_size, hidden_units).
-        """
-        if isinstance(self.activation, nn.Module):
-            return self.activation(h1, h2)
-
-        if self.activation is None or self.activation == "SwiGLU":
-            return F.silu(h1) * h2
-        elif self.activation == "GEGLU":
-            return F.gelu(h1) * h2
-        elif self.activation == "ReGLU":
-            return F.relu(h1) * h2
-        elif self.activation == "GLU":
-            return F.sigmoid(h1) * h2
-        elif self.activation == "Bilinear":
-            return h1 * h2
-        else:
-            raise ValueError(f"Activation function {self.activation} not supported")
+    def normalize(self, x: torch.Tensor) -> torch.Tensor:
+        return NORMALIZER_DICT[self.normalization](self, x)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.normalize:
-            x = F.layer_norm(x, (self.input_size,))
-        h1 = self.W(x)
-        h2 = self.V(x)
-        out = self.W2(self._get_activation(h1, h2))
+        x_in = x
+        h = self.normalize(x)
+        h1 = self.W(h)
+        h2 = self.V(h)
+        out = self.W2(self.ACTIVATION_DICT[self.activation](h1, h2))
         if self.dropout is not None:
             out = F.dropout(out, self.dropout)
+        out = out + x_in
         return out
 
 

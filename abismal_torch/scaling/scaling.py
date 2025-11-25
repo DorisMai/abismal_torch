@@ -17,7 +17,7 @@ class ImageScaler(nn.Module):
         share_weights: Optional[bool] = True,
         hidden_units: Optional[int] = None,
         use_glu: Optional[bool] = False,
-        activation: Optional[str | nn.Module] = "ReLU",
+        activation: Optional[str] = None,
         scaling_posterior: Optional[
             str | type[torch.distributions.Distribution]
         ] = td.Normal,

@@ -54,7 +54,6 @@ def custom_scaling_model_params():
         "mlp_width": 20,
         "mlp_depth": 4,
         "hidden_units": 15,
-        "activation": None,
     }
 
 
