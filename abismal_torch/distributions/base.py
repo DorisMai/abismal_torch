@@ -16,7 +16,16 @@ class DistributionBase:
 
 
 class PosteriorDistributionBase(DistributionBase):
-    def rsample(self, *args, **kwargs) -> torch.Tensor:
+    def rsample(self, sample_shape: tuple[int, ...] = ()) -> torch.Tensor:
+        """
+        Sample from the posterior distribution.
+
+        Args:
+            sample_shape (tuple[int, ...]): The shape of the sample to draw.
+
+        Returns:
+            torch.Tensor: A tensor of shape (sample_shape,).
+        """
         raise NotImplementedError("Derived classes must implement rsample()")
 
 
@@ -38,8 +47,11 @@ def compute_kl_divergence(
         KL divergence (torch.Tensor): A tensor of shape (Distribution's batch_shape,).
     """
     try:
-        return q.kl_divergence(p, samples=samples)
-    except AttributeError or NotImplementedError:
+        return torch.distributions.kl.kl_divergence(q, p)
+    except NotImplementedError or AttributeError:
+        # if not torch.isfinite(samples).all() or (samples < 0).any():
+        #     from IPython import embed
+        #     embed(colors="linux")
         kl_div = q.log_prob(samples) - p.log_prob(samples)
         if not torch.isfinite(kl_div).all():
             from IPython import embed

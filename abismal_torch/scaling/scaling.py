@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from abismal_torch.distributions import compute_kl_divergence
 from abismal_torch.layers import *
+from abismal_torch.distributions import DeltaDistribution
 
 
 class ImageScaler(nn.Module):
@@ -62,24 +63,32 @@ class ImageScaler(nn.Module):
             use_glu (bool, optional): bool, see MLP argument.
             scaling_posterior (torch.distributions.Distribution, optional): distribution class for
                 the scaling posterior distribution. Defaults to a normal distribution.
+            scaling_posterior_transform (torch.distributions.transforms.Transform, optional): transform for
+                the scaling posterior distribution. Defaults to a Softplus transform. Ignored if the
+                scaling posterior is a delta distribution (DeltaDistribution).
             scaling_kl_weight (float, optional): float, the weight of the KL divergence
                 loss between the scaling posterior and the scaling prior. Defaults to 0.01.
+                Ignored if the scaling posterior is a delta distribution.
             scaling_prior (torch.distributions.Distribution, optional): instantiated distribution
                 for the scaling prior. Defaults to a Cauchy distribution with mean 0.0 and
-                scale 1.0.
+                scale 1.0. Ignored if the scaling posterior is a delta distribution.
+            scaling_prior_params (tuple, optional): tuple of parameters for the scaling prior distribution.
+                Ignored if the scaling posterior is a delta distribution.
             epsilon (float, optional): float, the epsilon value for numerical stability.
                 Defaults to 1e-12.
         """
         super().__init__(**kwargs)
-        self.image_linear_in = CustomInitLazyLinear(mlp_width)
-        self.scale_linear_in = CustomInitLazyLinear(mlp_width)
+        # Initialize the posterior, transform, prior, kl weight
         if isinstance(scaling_posterior, str):
-            if hasattr(rsd, scaling_posterior):
+            if scaling_posterior == "DeltaDistribution":
+                self.scaling_posterior = DeltaDistribution
+            elif hasattr(rsd, scaling_posterior):
                 self.scaling_posterior = getattr(rsd, scaling_posterior)
             else:
                 self.scaling_posterior = getattr(td, scaling_posterior)
         else:
             self.scaling_posterior = scaling_posterior
+        self._num_posterior_args = len(self.scaling_posterior.arg_constraints)
         if isinstance(scaling_posterior_transform, str):
             self._transform = getattr(td.transforms, scaling_posterior_transform)
         else:
@@ -90,7 +99,22 @@ class ImageScaler(nn.Module):
                 td.AffineTransform(epsilon, 1.0),
             ]
         )
-        self._num_posterior_args = len(self.scaling_posterior.arg_constraints)
+        self.scaling_kl_weight = scaling_kl_weight
+        if scaling_prior_params is None:
+            self.register_buffer(
+                "scaling_prior_params",
+                torch.tensor([], dtype=torch.float32),
+            )
+        else:
+            self.register_buffer(
+                "scaling_prior_params",
+                torch.tensor(scaling_prior_params, dtype=torch.float32),
+            )
+        self._scaling_prior = scaling_prior
+
+        # Initialize architecture
+        self.image_linear_in = CustomInitLazyLinear(mlp_width)
+        self.scale_linear_in = CustomInitLazyLinear(mlp_width)
         self.linear_out = CustomInitLazyLinear(self._num_posterior_args)
         self.pool = ImageAverage()
         self.share_weights = share_weights
@@ -117,12 +141,7 @@ class ImageScaler(nn.Module):
                 normalization=normalization,
                 epsilon=epsilon ** 0.5,
             )
-        self.scaling_kl_weight = scaling_kl_weight
-        self.register_buffer(
-            "scaling_prior_params",
-            torch.tensor(scaling_prior_params, dtype=torch.float32),
-        )
-        self._scaling_prior = scaling_prior
+
 
     def _init_scaling_prior(self) -> None:
         if isinstance(self._scaling_prior, str):
@@ -214,15 +233,22 @@ class ImageScaler(nn.Module):
             scale_embeddings
         )  # Shape (n_reflns, mlp_width)
         scaling_params = self.linear_out(scale_embeddings)  # Shape (n_reflns, _num_posterior_args)
-
+        # from IPython import embed
+        # embed(colors="linux")
         transformed_scaling_params = self._apply_posterior_positive_transforms(scaling_params)
         q = self.scaling_posterior(*transformed_scaling_params)
         z = q.rsample(sample_shape=(mc_samples,))  # Shape (mc_samples, n_reflns)
-        if not hasattr(self, "scaling_prior"):
-            self._init_scaling_prior()
-        p = self.scaling_prior.expand((len(scaling_params),))
-        kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
-        return {
-            "z": torch.t(z),  # Shape (n_reflns, mc_samples)
-            "kl_div": kl_div, # Shape (n_reflns,)
-        }
+        if self.scaling_posterior == DeltaDistribution:
+            return {
+                "z": torch.t(z),  # Shape (n_reflns, mc_samples)
+                "kl_div": torch.zeros_like(scaling_params[..., 0]), # Shape (n_reflns,)
+            }
+        else:
+            if not hasattr(self, "scaling_prior"):
+                self._init_scaling_prior()
+            p = self.scaling_prior.expand((len(scaling_params),))
+            kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
+            return {
+                "z": torch.t(z),  # Shape (n_reflns, mc_samples)
+                "kl_div": kl_div, # Shape (n_reflns,)
+            }

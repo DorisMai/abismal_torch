@@ -166,11 +166,13 @@ def test_mlp_shape(data_params, hidden_units):
     assert mlp[1].linear1.weight.T.shape == (custom_params["width"], hidden_units)
 
 
-@pytest.mark.parametrize("share_weights", [True, False])
-@pytest.mark.parametrize("use_glu", [True, False])
+@pytest.mark.parametrize(
+    "share_weights, use_glu, scaling_posterior",
+    [(True, False, "DeltaDistribution"), (False, True, "Rice"), (True, True, "Normal")],
+)
 def test_image_scaler(
-    data_params, custom_scaling_model_params, data, image_id, share_weights, use_glu
-):
+    data_params, custom_scaling_model_params, data, image_id, share_weights, use_glu,
+    scaling_posterior):
     metadata = data
     iobs = torch.randn(data_params["n_refln"], 1)
     sigiobs = torch.randn(data_params["n_refln"], 1)
@@ -182,7 +184,7 @@ def test_image_scaler(
     mc_samples = 8
 
     custom_scaling_model = ImageScaler(
-        share_weights=share_weights, use_glu=use_glu, **custom_scaling_model_params
+        share_weights=share_weights, use_glu=use_glu, scaling_posterior=scaling_posterior, **custom_scaling_model_params
     )
     unique_image_ids, unique_indices, counts = torch.unique(
         image_id, return_inverse=True, return_counts=True
