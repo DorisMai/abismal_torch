@@ -41,10 +41,11 @@ def compute_kl_divergence(
         q (Distribution): The surrogate posterior.
         p (Distribution): The prior.
         samples (torch.Tensor, optional): Samples from the surrogate posterior. Only used
-            if no KL divergence is implemented for the posterior-prior pair.
+            if no KL divergence is implemented for the posterior-prior pair. Should be of
+            shape (mc_samples, rac_size).
 
     Returns:
-        KL divergence (torch.Tensor): A tensor of shape (Distribution's batch_shape,).
+        KL divergence (torch.Tensor): A scalar averaged over all dimensions.
     """
     try:
         return torch.distributions.kl.kl_divergence(q, p)
@@ -52,9 +53,21 @@ def compute_kl_divergence(
         # if not torch.isfinite(samples).all() or (samples < 0).any():
         #     from IPython import embed
         #     embed(colors="linux")
-        kl_div = q.log_prob(samples) - p.log_prob(samples)
-        if not torch.isfinite(kl_div).all():
+        q_log_prob = q.log_prob(samples)
+        p_log_prob = p.log_prob(samples)
+        if not torch.isfinite(q_log_prob).all() or not torch.isfinite(p_log_prob).all():
             from IPython import embed
-
             embed(colors="linux")
-        return kl_div.mean(dim=0)
+        # If independent distribution, there is batch dimension but not event dimension.
+        # The log_prob has same shape as samples (mc_samples, rac_size). If distribution
+        # is joint, such as low-rank multivariate normal, there is event dimension but
+        # not batch dimension. The log_prob has shape (mc_samples, ).
+        q_shape = q_log_prob.shape
+        p_shape = p_log_prob.shape
+        if len(q_shape) > len(p_shape):
+            kl_div = q_log_prob.mean(dim=1) - p_log_prob
+        elif len(q_shape) < len(p_shape):
+            kl_div = q_log_prob - p_log_prob.mean(dim=1)
+        else:
+            kl_div = q_log_prob - p_log_prob
+        return kl_div.mean()

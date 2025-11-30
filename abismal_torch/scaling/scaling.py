@@ -11,6 +11,25 @@ from abismal_torch.distributions import DeltaDistribution
 
 
 class ImageScaler(nn.Module):
+
+    SUPPORTED_POSTERIORS = {
+        "FoldedNormal": rsd.FoldedNormal,
+        "Rice": rsd.Rice,
+        "Normal": td.Normal,
+        "LogNormal": td.LogNormal,
+        "Gamma": td.Gamma,
+        "DeltaDistribution": DeltaDistribution,
+    }
+    SUPPORTED_PRIORS = {
+        "Cauchy": td.Cauchy,
+        "Laplace": td.Laplace,
+        "Normal": td.Normal,
+        "HalfNormal": td.HalfNormal,
+        "HalfCauchy": td.HalfCauchy,
+        "Exponential": td.Exponential,
+    }
+
+
     def __init__(
         self,
         mlp_width: Optional[int] = 32,
@@ -79,6 +98,10 @@ class ImageScaler(nn.Module):
         """
         super().__init__(**kwargs)
         # Initialize the posterior, transform, prior, kl weight
+        if scaling_posterior not in self.SUPPORTED_POSTERIORS.keys() and scaling_posterior not in self.SUPPORTED_POSTERIORS.values():
+            raise ValueError(f"Unsupported scaling posterior: {scaling_posterior}")
+        if scaling_prior not in self.SUPPORTED_PRIORS.keys() and scaling_prior not in self.SUPPORTED_PRIORS.values():
+            raise ValueError(f"Unsupported scaling prior: {scaling_prior}")
         if isinstance(scaling_posterior, str):
             if scaling_posterior == "DeltaDistribution":
                 self.scaling_posterior = DeltaDistribution
@@ -250,5 +273,5 @@ class ImageScaler(nn.Module):
             kl_div = compute_kl_divergence(q, p, samples=z) * self.scaling_kl_weight
             return {
                 "z": torch.t(z),  # Shape (n_reflns, mc_samples)
-                "kl_div": kl_div, # Shape (n_reflns,)
+                "kl_div": kl_div, # Shape scalar
             }

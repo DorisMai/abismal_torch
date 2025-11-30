@@ -15,6 +15,9 @@ jobs:
       matrix:
         python-version: ["3.10","3.11","3.12","3.13", "3.14"]
         poetry-version: ["1.8.4", "main"]
+      exclude:
+        - python-version: "3.10"
+          poetry-version: "1.8.4"
 
     # Skip CI if 'skip ci' is contained in the latest commit message
     if: "!contains(github.event.head_commit.message, 'skip ci')"

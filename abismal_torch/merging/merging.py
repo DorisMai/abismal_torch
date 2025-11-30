@@ -164,8 +164,8 @@ class VariationalMergingModel(torch.nn.Module):
 
         return {
             "loss_nll": -ll,  # shape (n_images,)
-            "loss_kl": kl_div,  # shape (rac_size,)
-            "scale_kl_div": scale_kl_div,  # shape (n_reflns,)
+            "loss_kl": kl_div,  # shape scalar
+            "scale_kl_div": scale_kl_div,  # shape scalar
             "ipred_avg": torch.mean(ipred, dim=-1),  # shape (n_reflns,)
             "hkl": hkl,  # shape (n_reflns, 3)
             "z": z,  # shape (mc_samples, rac_size)

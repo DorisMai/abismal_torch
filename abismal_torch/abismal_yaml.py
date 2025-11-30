@@ -102,10 +102,10 @@ class AbismalLitModule(L.LightningModule):
         module_path, class_name = surrogate_posterior_args["class_path"].rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
         surrogate_posterior_class = getattr(module, class_name)
-        loc_init = self._prior.distribution().mean()
+        loc_init = torch.clamp(self._prior.distribution().mean, min=0.01)
         if class_name == "MultivariateNormalPosterior":
             cov_diag_init = surrogate_posterior_args["kwargs"]["init_scale"] * loc_init
-            cov_factor_init = torch.randn(rac.rac_size, surrogate_posterior_args["kwargs"]["rank"])
+            cov_factor_init = torch.zeros(rac.rac_size, surrogate_posterior_args["kwargs"]["rank"])
             surrogate_posterior = (
                 surrogate_posterior_class(
                     rac,
@@ -140,15 +140,15 @@ class AbismalLitModule(L.LightningModule):
         )
         loss = (
             xout["loss_nll"].mean()
-            + self.kl_weight * xout["loss_kl"].mean()
-            + xout["scale_kl_div"].mean()
+            + self.kl_weight * xout["loss_kl"]
+            + xout["scale_kl_div"]
         )
         self.log_dict(
             {
                 "loss": loss,
                 "NLL": xout["loss_nll"].mean(),
-                "KL": xout["loss_kl"].mean(),
-                "scale_KL": xout["scale_kl_div"].mean(),
+                "KL": xout["loss_kl"],
+                "scale_KL": xout["scale_kl_div"],
             }
         )
 
@@ -170,15 +170,15 @@ class AbismalLitModule(L.LightningModule):
         xout = self.merging_model(batch)
         val_loss = (
             xout["loss_nll"].mean()
-            + self.kl_weight * xout["loss_kl"].mean()
-            + xout["scale_kl_div"].mean()
+            + self.kl_weight * xout["loss_kl"]
+            + xout["scale_kl_div"]
         )
         self.log_dict(
             {
                 "val_loss": val_loss,
                 "val_NLL": xout["loss_nll"].mean(),
-                "val_KL": xout["loss_kl"].mean(),
-                "val_scale_KL": xout["scale_kl_div"].mean(),
+                "val_KL": xout["loss_kl"],
+                "val_scale_KL": xout["scale_kl_div"],
             }
         )
         return val_loss
@@ -187,15 +187,15 @@ class AbismalLitModule(L.LightningModule):
         xout = self.merging_model(batch)
         test_loss = (
             xout["loss_nll"].mean()
-            + self.kl_weight * xout["loss_kl"].mean()
-            + xout["scale_kl_div"].mean()
+            + self.kl_weight * xout["loss_kl"]
+            + xout["scale_kl_div"]
         )
         self.log_dict(
             {
                 "test_loss": test_loss,
                 "test_NLL": xout["loss_nll"].mean(),
-                "test_KL": xout["loss_kl"].mean(),
-                "test_scale_KL": xout["scale_kl_div"].mean(),
+                "test_KL": xout["loss_kl"],
+                "test_scale_KL": xout["scale_kl_div"],
             }
         )
         return test_loss

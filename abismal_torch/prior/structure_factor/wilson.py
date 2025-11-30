@@ -107,6 +107,7 @@ class GenericWilsonDistribution(DistributionBase):
                 self.p_acentric(z).log_prob(z),
             )
 
+    @property
     def mean(self) -> torch.Tensor:
         return torch.where(
             self.centric,
@@ -156,6 +157,14 @@ class MultiWilsonDistribution(DistributionBase):
         logprob_root = self.root_wilson.log_prob(z_root)
         logprob_parent = self.parent_wilson.log_prob(z_parent)
         return torch.where(self.is_root, logprob_root, logprob_parent)
+
+    @property
+    def mean(self) -> torch.Tensor:
+        return torch.where(
+            self.is_root,
+            self.root_wilson.mean,
+            self.parent_wilson.mean,
+        )
 
 
 class WilsonPrior(PriorBase):

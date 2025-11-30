@@ -189,7 +189,7 @@ def main():
 
     from abismal_torch.surrogate_posterior import FoldedNormalPosterior
 
-    loc_init = prior.distribution().mean()
+    loc_init = prior.distribution().mean
     scale_init = args.init_scale * loc_init
     surrogate_posterior = FoldedNormalPosterior.from_unconstrained_loc_and_scale(
         rac, loc_init, scale_init, epsilon=args.epsilon

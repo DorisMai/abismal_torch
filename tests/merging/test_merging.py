@@ -23,7 +23,7 @@ class TestMerging:
 
     @pytest.fixture
     def sf_posterior(self, rag, wilson_prior):
-        loc_init = wilson_prior.distribution().mean()
+        loc_init = wilson_prior.distribution().mean
         scale_init = 0.01 * loc_init
         return FoldedNormalPosterior.from_unconstrained_loc_and_scale(
             rag, loc_init, scale_init
@@ -84,9 +84,7 @@ class TestMerging:
         assert xout["loss_nll"].shape == torch.Size(
             [data_params["n_image"]]
         ), f"xout[loss_nll].shape is {xout['loss_nll'].shape}"
-        assert xout["loss_kl"].shape == torch.Size(
-            [rag.rac_size]
-        ), f"xout[loss_kl].shape is {xout['loss_kl'].shape}"
+        assert torch.numel(xout["loss_kl"]) == 1, f"xout[loss_kl] is not a scalar, shape: {xout['loss_kl'].shape}"
 
         opt = torch.optim.Adam(merging_model.parameters())
         for _ in range(steps):
