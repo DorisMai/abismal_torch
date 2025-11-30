@@ -1,1 +1,3 @@
 from .structure_factor.folded_normal import FoldedNormalPosterior
+from .structure_factor.multivariate_normal import MultivariateNormalPosterior
+from .structure_factor.locscale import LocScalePosterior

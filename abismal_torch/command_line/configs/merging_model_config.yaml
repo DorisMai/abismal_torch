@@ -9,10 +9,12 @@ model:
       normalization_sigma: 1.0
 
   surrogate_posterior_config:
-    class_path: abismal_torch.surrogate_posterior.structure_factor.folded_normal.FoldedNormalPosterior
+    class_path: abismal_torch.surrogate_posterior.structure_factor.locscale.LocScalePosterior
     kwargs:
+      rsm_distribution: FoldedNormal
       init_scale: 0.1
       epsilon: 1e-12
+      transform: ExpTransform
 
   likelihood:
     class_path: abismal_torch.likelihood.NormalLikelihood

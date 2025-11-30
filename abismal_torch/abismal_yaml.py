@@ -103,15 +103,31 @@ class AbismalLitModule(L.LightningModule):
         module = __import__(module_path, fromlist=[class_name])
         surrogate_posterior_class = getattr(module, class_name)
         loc_init = self._prior.distribution().mean()
-        scale_init = surrogate_posterior_args["kwargs"]["init_scale"] * loc_init
-        surrogate_posterior = (
-            surrogate_posterior_class.from_unconstrained_loc_and_scale(
-                rac,
-                loc_init,
-                scale_init,
-                epsilon=surrogate_posterior_args["kwargs"]["epsilon"],
+        if class_name == "MultivariateNormalPosterior":
+            cov_diag_init = surrogate_posterior_args["kwargs"]["init_scale"] * loc_init
+            cov_factor_init = torch.randn(rac.rac_size, surrogate_posterior_args["kwargs"]["rank"])
+            surrogate_posterior = (
+                surrogate_posterior_class(
+                    rac,
+                    loc_init,
+                    cov_factor_init,
+                    cov_diag_init,
+                    epsilon=surrogate_posterior_args["kwargs"]["epsilon"],
+                    transform=surrogate_posterior_args["kwargs"]["transform"],
+                )
             )
-        )
+        else:
+            scale_init = surrogate_posterior_args["kwargs"]["init_scale"] * loc_init
+            surrogate_posterior = (
+                surrogate_posterior_class(
+                    rac,
+                    surrogate_posterior_args["kwargs"]["rsm_distribution"],
+                    loc_init,
+                    scale_init,
+                    epsilon=surrogate_posterior_args["kwargs"]["epsilon"],
+                    transform=surrogate_posterior_args["kwargs"]["transform"],
+                )
+            )
         return surrogate_posterior
 
     def training_step(self, batch, batch_idx):
