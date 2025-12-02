@@ -50,12 +50,14 @@ def compute_kl_divergence(
     try:
         return torch.distributions.kl.kl_divergence(q, p)
     except NotImplementedError or AttributeError:
-        # if not torch.isfinite(samples).all() or (samples < 0).any():
-        #     from IPython import embed
-        #     embed(colors="linux")
+        if not torch.isfinite(samples).all():
+            print("Samples are not finite", flush=True)
+            from IPython import embed
+            embed(colors="linux")
         q_log_prob = q.log_prob(samples)
         p_log_prob = p.log_prob(samples)
         if not torch.isfinite(q_log_prob).all() or not torch.isfinite(p_log_prob).all():
+            print("Log probabilities are not finite", flush=True)
             from IPython import embed
             embed(colors="linux")
         # If independent distribution, there is batch dimension but not event dimension.

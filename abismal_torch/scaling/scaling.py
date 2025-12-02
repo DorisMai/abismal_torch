@@ -24,6 +24,7 @@ class ImageScaler(nn.Module):
         "Cauchy": td.Cauchy,
         "Laplace": td.Laplace,
         "Normal": td.Normal,
+        "LogNormal": td.LogNormal,
         "HalfNormal": td.HalfNormal,
         "HalfCauchy": td.HalfCauchy,
         "Exponential": td.Exponential,
@@ -98,10 +99,8 @@ class ImageScaler(nn.Module):
         """
         super().__init__(**kwargs)
         # Initialize the posterior, transform, prior, kl weight
-        if scaling_posterior not in self.SUPPORTED_POSTERIORS.keys() and scaling_posterior not in self.SUPPORTED_POSTERIORS.values():
-            raise ValueError(f"Unsupported scaling posterior: {scaling_posterior}")
-        if scaling_prior not in self.SUPPORTED_PRIORS.keys() and scaling_prior not in self.SUPPORTED_PRIORS.values():
-            raise ValueError(f"Unsupported scaling prior: {scaling_prior}")
+        self._sanity_check_distribution(scaling_posterior, is_posterior=True)
+        self._sanity_check_distribution(scaling_prior, is_posterior=False)
         if isinstance(scaling_posterior, str):
             if scaling_posterior == "DeltaDistribution":
                 self.scaling_posterior = DeltaDistribution
@@ -165,6 +164,22 @@ class ImageScaler(nn.Module):
                 epsilon=epsilon ** 0.5,
             )
 
+    @classmethod
+    def _sanity_check_distribution(cls, distribution, is_posterior: bool) -> None:
+        if is_posterior:
+            supported_dict = cls.SUPPORTED_POSTERIORS
+            distribution_type = "posterior"
+        else:
+            supported_dict = cls.SUPPORTED_PRIORS
+            distribution_type = "prior"
+        if distribution not in supported_dict.keys() and distribution not in supported_dict.values():
+            supported = list(supported_dict.keys())
+            supported_str = "\n    - ".join(map(str, supported))
+            print(f"\n[ImageScaler] Supported scaling {distribution_type}s:\n    - {supported_str}\n")
+            raise ValueError(
+                f"Unsupported scaling {distribution_type}: {distribution}\n"
+                f"Supported options are:\n    - {supported_str}\n"
+            )
 
     def _init_scaling_prior(self) -> None:
         if isinstance(self._scaling_prior, str):
