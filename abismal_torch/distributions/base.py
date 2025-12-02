@@ -50,8 +50,8 @@ def compute_kl_divergence(
     try:
         return torch.distributions.kl.kl_divergence(q, p)
     except NotImplementedError or AttributeError:
-        if not torch.isfinite(samples).all():
-            print("Samples are not finite", flush=True)
+        if not torch.isfinite(samples).all() or (samples == 0).any():
+            print("Samples are not finite or are exactly 0", flush=True)
             from IPython import embed
             embed(colors="linux")
         q_log_prob = q.log_prob(samples)

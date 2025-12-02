@@ -7,20 +7,20 @@ import torch.nn as nn
 
 from abismal_torch.distributions import compute_kl_divergence
 from abismal_torch.layers import *
-from abismal_torch.distributions import DeltaDistribution
+from abismal_torch.distributions import DeltaDistribution, PosLocFoldedNormal
 
 
 class ImageScaler(nn.Module):
 
-    SUPPORTED_POSTERIORS = {
-        "FoldedNormal": rsd.FoldedNormal,
+    __SUPPORTED_POSTERIORS__ = {
+        "FoldedNormal": PosLocFoldedNormal,
         "Rice": rsd.Rice,
         "Normal": td.Normal,
         "LogNormal": td.LogNormal,
         "Gamma": td.Gamma,
         "DeltaDistribution": DeltaDistribution,
     }
-    SUPPORTED_PRIORS = {
+    __SUPPORTED_PRIORS__ = {
         "Cauchy": td.Cauchy,
         "Laplace": td.Laplace,
         "Normal": td.Normal,
@@ -100,14 +100,8 @@ class ImageScaler(nn.Module):
         super().__init__(**kwargs)
         # Initialize the posterior, transform, prior, kl weight
         self._sanity_check_distribution(scaling_posterior, is_posterior=True)
-        self._sanity_check_distribution(scaling_prior, is_posterior=False)
         if isinstance(scaling_posterior, str):
-            if scaling_posterior == "DeltaDistribution":
-                self.scaling_posterior = DeltaDistribution
-            elif hasattr(rsd, scaling_posterior):
-                self.scaling_posterior = getattr(rsd, scaling_posterior)
-            else:
-                self.scaling_posterior = getattr(td, scaling_posterior)
+            self.scaling_posterior = self.__SUPPORTED_POSTERIORS__[scaling_posterior]
         else:
             self.scaling_posterior = scaling_posterior
         self._num_posterior_args = len(self.scaling_posterior.arg_constraints)
@@ -115,7 +109,7 @@ class ImageScaler(nn.Module):
             self._transform = getattr(td.transforms, scaling_posterior_transform)
         else:
             self._transform = scaling_posterior_transform
-        self.posterior_positive_transform = torch.distributions.ComposeTransform(
+        self.posterior_positive_transform = td.ComposeTransform(
             [
                 self._transform(),
                 td.AffineTransform(epsilon, 1.0),
@@ -132,7 +126,11 @@ class ImageScaler(nn.Module):
                 "scaling_prior_params",
                 torch.tensor(scaling_prior_params, dtype=torch.float32),
             )
-        self._scaling_prior = scaling_prior
+        self._sanity_check_distribution(scaling_prior, is_posterior=False)
+        if isinstance(scaling_prior, str):
+            self._scaling_prior = self.__SUPPORTED_PRIORS__[scaling_prior]
+        else:
+            self._scaling_prior = scaling_prior
 
         # Initialize architecture
         self.image_linear_in = CustomInitLazyLinear(mlp_width)
@@ -167,12 +165,15 @@ class ImageScaler(nn.Module):
     @classmethod
     def _sanity_check_distribution(cls, distribution, is_posterior: bool) -> None:
         if is_posterior:
-            supported_dict = cls.SUPPORTED_POSTERIORS
+            supported_dict = cls.__SUPPORTED_POSTERIORS__
             distribution_type = "posterior"
         else:
-            supported_dict = cls.SUPPORTED_PRIORS
+            supported_dict = cls.__SUPPORTED_PRIORS__
             distribution_type = "prior"
-        if distribution not in supported_dict.keys() and distribution not in supported_dict.values():
+        if (
+            distribution not in supported_dict.values()
+            and distribution not in supported_dict.keys()
+        ):
             supported = list(supported_dict.keys())
             supported_str = "\n    - ".join(map(str, supported))
             print(f"\n[ImageScaler] Supported scaling {distribution_type}s:\n    - {supported_str}\n")
@@ -182,17 +183,7 @@ class ImageScaler(nn.Module):
             )
 
     def _init_scaling_prior(self) -> None:
-        if isinstance(self._scaling_prior, str):
-            if hasattr(rsd, self._scaling_prior):
-                self.scaling_prior = getattr(rsd, self._scaling_prior)(
-                    *self.scaling_prior_params
-                )
-            else:
-                self.scaling_prior = getattr(td, self._scaling_prior)(
-                *self.scaling_prior_params
-            )
-        else:
-            self.scaling_prior = self._scaling_prior(*self.scaling_prior_params)
+        self.scaling_prior = self._scaling_prior(*self.scaling_prior_params)
 
     def _apply_posterior_positive_transforms(
         self, raw_params: torch.Tensor

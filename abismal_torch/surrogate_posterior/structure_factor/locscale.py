@@ -9,7 +9,7 @@ from abismal_torch.symmetry import ReciprocalASUCollection
 
 class LocScalePosterior(PosteriorBase):
 
-    SUPPORTED_DISTRIBUTIONS = {
+    __SUPPORTED_DISTRIBUTIONS__ = {
         rsm.FoldedNormal: ["loc", "scale"],
         rsm.Normal: ["loc", "scale"],
         rsm.Rice: ["nu", "sigma"],
@@ -48,9 +48,9 @@ class LocScalePosterior(PosteriorBase):
         """
         if isinstance(rsm_distribution, str):
             rsm_distribution = getattr(rsm.distribution, rsm_distribution)
-        if rsm_distribution not in self.SUPPORTED_DISTRIBUTIONS.keys():
+        if rsm_distribution not in self.__SUPPORTED_DISTRIBUTIONS__.keys():
             raise ValueError(f"Unsupported distribution: {rsm_distribution}")
-        name_to_param = dict(zip(self.SUPPORTED_DISTRIBUTIONS[rsm_distribution], [param1, param2]))
+        name_to_param = dict(zip(self.__SUPPORTED_DISTRIBUTIONS__[rsm_distribution], [param1, param2]))
         if transform is not None:
             for name, param in name_to_param.items():
                 constraint = rsm_distribution.arg_constraints[name]
@@ -80,7 +80,7 @@ class LocScalePosterior(PosteriorBase):
             param1_unconstrained = torch.ones_like(rac.centric)
         if param2_unconstrained is None:
             param2_unconstrained = param1_unconstrained * 0.1
-        name_to_param = dict(zip(cls.SUPPORTED_DISTRIBUTIONS[rsm_distribution], [param1_unconstrained, param2_unconstrained]))
+        name_to_param = dict(zip(cls.__SUPPORTED_DISTRIBUTIONS__[rsm_distribution], [param1_unconstrained, param2_unconstrained]))
         for name, param in name_to_param.items():
             constraint = rsm_distribution.arg_constraints[name]
             if cls._needs_positive_transform(constraint):
