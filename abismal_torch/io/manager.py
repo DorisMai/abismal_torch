@@ -188,6 +188,7 @@ class AbismalDataModule(L.LightningDataModule):
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers,
             shuffle=True,
+            drop_last=True,
         )
 
     def val_dataloader(self):

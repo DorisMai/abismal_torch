@@ -15,3 +15,4 @@ tests/test_matmul.py
 tmp_outdir/
 tests/test_*.sh
 local_debug.yaml
+*profiling*
