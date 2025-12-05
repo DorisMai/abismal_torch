@@ -4,11 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .initializers import VarianceScalingNormalInitializer
 
 NORMALIZER_DICT = {
-    "RMSNorm": lambda s, x: x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + s.epsilon),
-    "LayerNorm": lambda s, x: (x - x.mean(-1, keepdim=True)) / (x.std(-1, keepdim=True) + s.epsilon),
+    "RMSNorm": lambda s, x: x * torch.rsqrt(x.pow(2).sum(-1, keepdim=True) + s.epsilon), # just to match with tf implementation as of 12/03/2025
+    # "RMSNorm": lambda s, x: x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + s.epsilon),
+    "LayerNorm": lambda s, x: (x - x.mean(-1, keepdim=True)) * torch.rsqrt(x.var(-1, unbiased=False, keepdim=True) + s.epsilon),
     "activation": lambda s, x: s.activation(x),
     "identity": lambda s, x: x,
 }
@@ -28,8 +28,11 @@ class CustomInitLazyLinear(nn.LazyLinear):
         Args:
             output_size (int): Size of the output features.
             weight_initializer (nn.Module, optional): Weight initializer.
-            bias_initializer (nn.Module, optional): Bias initializer.
+            bias_initializer (nn.Module, optional): Bias initializer. If None but weight
+                initializer is provided, bias is not used. 
         """
+        if bias_initializer is None:
+            kwargs["bias"] = False
         super().__init__(output_size, **kwargs)
         self.weight_initializer = weight_initializer
         self.bias_initializer = bias_initializer
@@ -53,9 +56,9 @@ class FeedForward(nn.Module):
         activation: Optional[str] = "ReLU",
         dropout: Optional[float] = None,
         normalization: Optional[str] = "RMSNorm",
-        weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
-        bias_initializer: Optional[nn.Module] = nn.init.zeros_,
-        epsilon: Optional[float] = 1e-6,
+        weight_initializer: Optional[nn.Module] = nn.init.xavier_normal_,
+        bias_initializer: Optional[nn.Module] = None,
+        epsilon: Optional[float] = 1e-12,
         **kwargs,
     ) -> None:
         """
@@ -79,11 +82,10 @@ class FeedForward(nn.Module):
                 'LayerNorm' are supported. You can also replace with "activation" to use the 
                 same activation function or "identity" to skip normalization. Defaults to 'RMSNorm'.
             weight_initializer (nn.Module, optional): Weight initializer. Defaults to
-                VarianceScalingNormalInitializer with default parameters.
-            bias_initializer (nn.Module, optional): Bias initializer. Defaults to
-                nn.init.zeros_.
+                nn.init.xavier_normal_.
+            bias_initializer (nn.Module, optional): Bias initializer. Defaults to None.
             epsilon (float, optional): Epsilon value for the normalization functions. Defaults to
-                1e-6.
+                1e-12.
         """
         super().__init__(**kwargs)
         self.input_size = input_size
@@ -132,9 +134,9 @@ class FeedForward_GLU(nn.Module):
         activation: Optional[str] = "SwiGLU",
         dropout: Optional[float] = None,
         normalization: Optional[str] = "RMSNorm",
-        weight_initializer: Optional[nn.Module] = VarianceScalingNormalInitializer(),
+        weight_initializer: Optional[nn.Module] = nn.init.xavier_normal_,
         bias_initializer: Optional[nn.Module] = None,
-        epsilon: Optional[float] = 1e-6,
+        epsilon: Optional[float] = 1e-12,
         **kwargs,
     ) -> None:
         """
@@ -157,7 +159,7 @@ class FeedForward_GLU(nn.Module):
                 'LayerNorm'. You can also replace with "activation" to use the same activation
                 function or "identity" to skip normalization. Defaults to 'RMSNorm'.
             weight_initializer (nn.Module, optional): Weight initializer. Defaults to
-                VarianceScalingNormalInitializer with default parameters.
+                nn.init.xavier_normal_.
             bias_initializer (nn.Module, optional): Bias initializer. Defaults to None.
         """
         super().__init__(**kwargs)

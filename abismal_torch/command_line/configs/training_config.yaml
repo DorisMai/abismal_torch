@@ -9,6 +9,6 @@ optimizer:
   class_path: torch.optim.Adam
   init_args:
     lr: 0.001
-    betas: [0.9, 0.9]
-    eps: 1e-9
+    betas: [0.9, 0.999]
+    eps: 1e-7
     amsgrad: false

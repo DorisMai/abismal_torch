@@ -12,16 +12,16 @@ model:
     class_path: abismal_torch.surrogate_posterior.structure_factor.locscale.LocScalePosterior
     kwargs:
       rsm_distribution: FoldedNormal
-      init_scale: 0.1
+      init_scale: 1.0
       epsilon: 1e-12
       transform: ExpTransform
 
   likelihood:
-    class_path: abismal_torch.likelihood.NormalLikelihood
+    # class_path: abismal_torch.likelihood.NormalLikelihood
     # To use student t distribution, comment out the above and uncomment the below
-    # class_path: abismal_torch.likelihood.student_t.StudentTLikelihood
-    # init_args:
-      # dof: 16
+    class_path: abismal_torch.likelihood.StudentTLikelihood
+    init_args:
+      dof: 32
 
   scaling_model:
     class_path: abismal_torch.scaling.scaling.ImageScaler
@@ -35,6 +35,6 @@ model:
       epsilon: 1e-12 # for numerical stability
       scaling_kl_weight: 1
       scaling_posterior_transform: SoftplusTransform
-      scaling_posterior: Normal
-      scaling_prior: Cauchy
+      scaling_posterior: FoldedNormal
+      scaling_prior: LogNormal
       scaling_prior_params: [0.0, 1.0] # parameters for the scaling prior distribution

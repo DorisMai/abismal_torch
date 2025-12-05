@@ -146,7 +146,7 @@ class ImageScaler(nn.Module):
             use_glu=use_glu,
             activation=activation,
             normalization=normalization,
-            epsilon=epsilon ** 0.5, # sqrt as used in std for normalization
+            epsilon=epsilon,
         )
         if share_weights:
             self.scale_mlp = self.mlp
@@ -159,7 +159,7 @@ class ImageScaler(nn.Module):
                 use_glu=use_glu,
                 activation=activation,
                 normalization=normalization,
-                epsilon=epsilon ** 0.5,
+                epsilon=epsilon,
             )
 
     @classmethod

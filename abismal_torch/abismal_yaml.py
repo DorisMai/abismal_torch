@@ -152,6 +152,11 @@ class AbismalLitModule(L.LightningModule):
             }
         )
 
+        # for debug
+        scaling_samples = xout["scale"] # Shape (mc_samples, n_reflns)
+        self.log(f"scaling_samples/mean", scaling_samples.mean())
+        self.log(f"scaling_samples/std", scaling_samples.std())
+
         norms = grad_norm(self, norm_type=2)
         for name, norm in norms.items():
             self.log(f"grad_norm/{name}", norm)

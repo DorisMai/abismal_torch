@@ -9,7 +9,7 @@ class VarianceScalingNormalInitializer(nn.Module):
     def __init__(
         self,
         mode: Optional[str] = "fan_avg",
-        gain: Optional[float] = math.sqrt(0.1),
+        gain: Optional[float] = 1.0,
         low: Optional[float] = -2.0,
         high: Optional[float] = 2.0,
         generator: Optional[torch.Generator] = None,
