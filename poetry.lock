@@ -1364,6 +1364,17 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "joblib"
+version = "1.5.2"
+description = "Lightweight pipelining with Python functions"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "joblib-1.5.2-py3-none-any.whl", hash = "sha256:4e1f0bdbb987e6d843c70cf43714cb276623def372df3c22fe5266b2670bc241"},
+    {file = "joblib-1.5.2.tar.gz", hash = "sha256:3faa5c39054b2f03ca547da9b2f52fde67c06240c31853f306aea97f13647b55"},
+]
+
+[[package]]
 name = "jsbeautifier"
 version = "1.15.4"
 description = "JavaScript unobfuscator and beautifier."
@@ -3468,26 +3479,27 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "reciprocalspaceship"
-version = "1.0.6"
+version = "1.0.7"
 description = "Tools for exploring reciprocal space"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "reciprocalspaceship-1.0.6-py3-none-any.whl", hash = "sha256:457bf5382e8d8c10bff776ad5fc662180f4ddc5ab1f18fb4887d99bb2fe63a0b"},
-    {file = "reciprocalspaceship-1.0.6.tar.gz", hash = "sha256:f9a36a25cd50b46639a411d460aa7982c89a7c7e0dd20b5648cd5dcfee94e512"},
+    {file = "reciprocalspaceship-1.0.7-py3-none-any.whl", hash = "sha256:b250d23679702c45da1b87118617eb5a0005b93e6009793518c0d711552f5151"},
+    {file = "reciprocalspaceship-1.0.7.tar.gz", hash = "sha256:5957028e0d9b050aebc8d4181625eda015652b6f8f2023567b65fd347113b9d9"},
 ]
 
 [package.dependencies]
 gemmi = ">=0.7.0,<=0.7.3"
 ipython = "*"
+joblib = "*"
 msgpack = "*"
 numpy = "*"
-pandas = ">=2.2.2,<=2.2.3"
+pandas = ">=2.2.2,<=2.3.3"
 scipy = "*"
 setuptools = "*"
 
 [package.extras]
-dev = ["pytest", "pytest-cov", "pytest-xdist", "ray"]
+dev = ["pytest", "pytest-cov", "pytest-xdist"]
 doc = ["autodocsumm", "celluloid", "jupyter", "matplotlib", "nbsphinx", "scikit-image", "seaborn", "sphinx", "sphinx-design", "sphinx_rtd_theme", "sphinxcontrib-autoprogram", "tqdm"]
 examples = ["celluloid", "jupyter", "matplotlib", "scikit-image", "seaborn", "tqdm"]
 
