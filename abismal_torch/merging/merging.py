@@ -111,27 +111,32 @@ class VariationalMergingModel(torch.nn.Module):
         scale_kl_div = scale_outputs["kl_div"]
 
         # Structure factor
-        q = self.surrogate_posterior
-        p = self.prior.distribution()
-        z = q.rsample((self.mc_samples,))  # Shape (mc_samples, rac_size)
-        kl_div = compute_kl_divergence(q, p, samples=z)
-        # for debug
-        if torch.any(z == 0):
-            from IPython import embed
-
-            embed(colors="linux")
+        # q = self.surrogate_posterior
+        # p = self.prior.distribution()
+        # z = q.rsample((self.mc_samples,))  # Shape (mc_samples, rac_size)
+        # kl_div = compute_kl_divergence(q, p, samples=z)
 
         # Reindexing for optimal likelihood
         ll = None
         ipred = None
         hkl = None
-        reflns_per_image = None
+
         for op in self.reindexing_ops:
             _hkl = op(hkl_in)
-            _ipred = self.surrogate_posterior.rac.gather(
-                z.T, rasu_id, _hkl
-            )  # Shape (n_refln, mc_samples)
-            _ipred = torch.square(_ipred) * scale
+            q = self.surrogate_posterior.lazy_distribution(rasu_id, _hkl)
+            p = self.prior.distribution(rasu_id, _hkl)
+            z = q.rsample((self.mc_samples,)) + self.surrogate_posterior.epsilon # Shape (mc_samples, n_refln)
+            kl_div = compute_kl_divergence(q, p, samples=z)
+            # for debug
+            if torch.any(z == 0):
+                from IPython import embed
+                embed(colors="linux")
+
+            _ipred = torch.square(z.T) * scale # Shape (n_refln, mc_samples)
+            # _ipred = self.surrogate_posterior.rac.gather(
+            #     z.T, rasu_id, _hkl
+            # )  # Shape (n_refln, mc_samples)
+            # _ipred = torch.square(_ipred) * scale
 
             _ll = self.likelihood(_ipred, iobs, sigiobs)
             _ll = self.pool(
@@ -153,8 +158,9 @@ class VariationalMergingModel(torch.nn.Module):
                     idx[image_ids_in_this_batch], _hkl, hkl
                 )  # Shape (n_refln, 3)
 
-        # Reweight likelihood by number of reflections in each image
-        ll = ll * n_reflns_per_image / n_reflns_per_image.sum()
+        # # Reweight likelihood by number of reflections in each image
+        # ll = ll * n_reflns_per_image / n_reflns_per_image.sum()
+
 
         # if ipred or ll any is not finite, drop into IPython
         if not torch.all(torch.isfinite(ipred)) or not torch.all(torch.isfinite(ll)):
@@ -163,7 +169,7 @@ class VariationalMergingModel(torch.nn.Module):
             embed(colors="linux")
 
         return {
-            "loss_nll": -ll,  # shape (n_images,)
+            "loss_nll": -ll.mean(), # shape scalar            # previous: "loss_nll": -ll,  # shape (n_images,)
             "loss_kl": kl_div,  # shape scalar
             "scale_kl_div": scale_kl_div,  # shape scalar
             "ipred_avg": torch.mean(ipred, dim=-1),  # shape (n_reflns,)

@@ -20,7 +20,20 @@ class NormalPrior(PriorBase):
     def distribution(
         self, rasu_id: Optional[torch.Tensor] = None, hkl: Optional[torch.Tensor] = None
     ) -> torch.distributions.Distribution:
-        ones = torch.ones_like(self.rac.centric)
+        """
+        Args:
+            rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. Defaults to None,
+                implicitly assumes rac.rasu_ids.
+            hkl (torch.Tensor, optional): Miller indices to get distribution for. Not used in this
+                prior. Only kept for compatibile API with other priors.
+
+        Returns:
+            p (torch.distributions.Distribution): Normal distribution for the specified number of
+                reflections, which is rac_size if rasu_id is None and len(rasu_id) otherwise.
+        """
+        if rasu_id is None:
+            rasu_id = self.rac.rasu_ids
+        ones = torch.ones_like(rasu_id, dtype=self.rac.multiplicity.dtype)
         loc = ones * self._loc_init
         scale = ones * self._scale_init
         return torch.distributions.Normal(loc, scale)
@@ -40,5 +53,18 @@ class HalfNormalPrior(PriorBase):
     def distribution(
         self, rasu_id: Optional[torch.Tensor] = None, hkl: Optional[torch.Tensor] = None
     ) -> torch.distributions.Distribution:
-        scale = torch.ones_like(self.rac.centric) * self._scale_init
+        """
+        Args:
+            rasu_id (torch.Tensor, optional): RASU IDs to get distribution for. Defaults to None,
+                implicitly assumes rac.rasu_ids.
+            hkl (torch.Tensor, optional): Miller indices to get distribution for. Not used in this
+                prior. Only kept for compatibile API with other priors.
+
+        Returns:
+            p (torch.distributions.Distribution): HalfNormal distribution for the specified number of
+                reflections, which is rac_size if rasu_id is None and len(rasu_id) otherwise.
+        """
+        if rasu_id is None:
+            rasu_id = self.rac.rasu_ids
+        scale = torch.ones_like(rasu_id, dtype=self.rac.multiplicity.dtype) * self._scale_init
         return torch.distributions.HalfNormal(scale)

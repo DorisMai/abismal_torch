@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 NORMALIZER_DICT = {
-    "RMSNorm": lambda s, x: x * torch.rsqrt(x.pow(2).sum(-1, keepdim=True) + s.epsilon), # just to match with tf implementation as of 12/03/2025
+    "RMSNorm": lambda s, x: x * torch.rsqrt(torch.square(x).sum(-1, keepdim=True) + s.epsilon), # just to match with tf implementation as of 12/03/2025
     # "RMSNorm": lambda s, x: x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + s.epsilon),
     "LayerNorm": lambda s, x: (x - x.mean(-1, keepdim=True)) * torch.rsqrt(x.var(-1, unbiased=False, keepdim=True) + s.epsilon),
     "activation": lambda s, x: s.activation(x),

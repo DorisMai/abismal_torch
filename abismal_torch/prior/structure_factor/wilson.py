@@ -56,7 +56,7 @@ class GenericWilsonDistribution(DistributionBase):
         self.normalization_sigma = normalization_sigma
         self.single_wilson = single_wilson
         if self.single_wilson or correlation is None:
-            self.correlation = torch.zeros_like(self.centric)
+            self.correlation = torch.zeros_like(self.multiplicity)
         else:
             self.correlation = correlation
 

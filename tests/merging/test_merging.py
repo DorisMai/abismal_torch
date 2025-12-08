@@ -81,9 +81,7 @@ class TestMerging:
         assert xout["ipred_avg"].shape == (
             myinputs["iobs"].shape[0],
         ), f"xout[ipred_aveg] shape is {xout['ipred_avg'].shape}"
-        assert xout["loss_nll"].shape == torch.Size(
-            [data_params["n_image"]]
-        ), f"xout[loss_nll].shape is {xout['loss_nll'].shape}"
+        assert torch.numel(xout["loss_nll"]) == 1, f"xout[loss_nll] is not a scalar, shape: {xout['loss_nll'].shape}"
         assert torch.numel(xout["loss_kl"]) == 1, f"xout[loss_kl] is not a scalar, shape: {xout['loss_kl'].shape}"
 
         opt = torch.optim.Adam(merging_model.parameters())

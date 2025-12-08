@@ -1,6 +1,7 @@
 from typing import Optional
 
 import rs_distributions.modules as rsm
+import rs_distributions.distributions as rsd
 import torch
 
 from abismal_torch.surrogate_posterior.base import PosteriorBase
@@ -47,6 +48,17 @@ class FoldedNormalPosterior(PosteriorBase):
             scale = rsm.TransformedParameter(scale, transform)            
         distribution = rsm.FoldedNormal(loc, scale)
         super().__init__(rac, distribution, epsilon, **kwargs)
+
+    def lazy_distribution(self, rasu_id: Optional[torch.Tensor] = None, hkl: Optional[torch.Tensor] = None):
+        if rasu_id is None:
+            rasu_id = self.rac.rasu_ids
+        if hkl is None:
+            hkl = self.rac.H_rasu
+        loc_transform = self.distribution._transformed_loc.transform
+        scale_transform = self.distribution._transformed_scale.transform
+        lazy_loc = self.rac.gather(self.distribution._transformed_loc._value, rasu_id, hkl)
+        lazy_scale = self.rac.gather(self.distribution._transformed_scale._value, rasu_id, hkl)
+        return rsd.FoldedNormal(loc_transform(lazy_loc), scale_transform(lazy_scale))
 
     @classmethod
     def from_unconstrained_loc_and_scale(

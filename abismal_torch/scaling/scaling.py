@@ -270,7 +270,7 @@ class ImageScaler(nn.Module):
         if self.scaling_posterior == DeltaDistribution:
             return {
                 "z": torch.t(z),  # Shape (n_reflns, mc_samples)
-                "kl_div": torch.zeros_like(scaling_params[..., 0]), # Shape (n_reflns,)
+                "kl_div": 0.0, # Shape scalar
             }
         else:
             if not hasattr(self, "scaling_prior"):

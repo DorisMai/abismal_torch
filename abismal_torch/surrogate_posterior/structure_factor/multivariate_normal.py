@@ -2,7 +2,7 @@ from typing import Optional
 
 import rs_distributions.modules as rsm
 import torch
-
+import torch.distributions as td
 from abismal_torch.surrogate_posterior.base import PosteriorBase
 from abismal_torch.symmetry import ReciprocalASUCollection
 
@@ -49,6 +49,19 @@ class MultivariateNormalPosterior(PosteriorBase):
             cov_diag = rsm.TransformedParameter(cov_diag, transform)            
         distribution = rsm.LowRankMultivariateNormal(loc, cov_factor, cov_diag)
         super().__init__(rac, distribution, epsilon, **kwargs)
+
+    def lazy_distribution(self, rasu_id: Optional[torch.Tensor] = None, hkl: Optional[torch.Tensor] = None):
+        if rasu_id is None:
+            rasu_id = self.rac.rasu_ids
+        if hkl is None:
+            hkl = self.rac.H_rasu
+        loc_transform = self.distribution._transformed_loc.transform
+        cov_factor_transform = self.distribution._transformed_cov_factor.transform
+        cov_diag_transform = self.distribution._transformed_cov_diag.transform
+        lazy_loc = self.rac.gather(self.distribution._transformed_loc._value, rasu_id, hkl)
+        lazy_cov_factor = self.rac.gather(self.distribution._transformed_cov_factor._value, rasu_id, hkl)
+        lazy_cov_diag = self.rac.gather(self.distribution._transformed_cov_diag._value, rasu_id, hkl)
+        return td.LowRankMultivariateNormal(loc_transform(lazy_loc), cov_factor_transform(lazy_cov_factor), cov_diag_transform(lazy_cov_diag))
 
     @classmethod
     def from_unconstrained_loc_and_scale(

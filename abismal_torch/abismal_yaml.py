@@ -102,7 +102,8 @@ class AbismalLitModule(L.LightningModule):
         module_path, class_name = surrogate_posterior_args["class_path"].rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
         surrogate_posterior_class = getattr(module, class_name)
-        loc_init = torch.clamp(self._prior.distribution().mean, min=0.01)
+        # loc_init = torch.clamp(self._prior.distribution().mean, min=0.01)
+        loc_init = torch.ones_like(rac.multiplicity)
         if class_name == "MultivariateNormalPosterior":
             cov_diag_init = surrogate_posterior_args["kwargs"]["init_scale"] * loc_init
             cov_factor_init = torch.zeros(rac.rac_size, surrogate_posterior_args["kwargs"]["rank"])
@@ -146,7 +147,7 @@ class AbismalLitModule(L.LightningModule):
         self.log_dict(
             {
                 "loss": loss,
-                "NLL": xout["loss_nll"].mean(),
+                "NLL": xout["loss_nll"],
                 "KL": xout["loss_kl"],
                 "scale_KL": xout["scale_kl_div"],
             }
@@ -181,7 +182,7 @@ class AbismalLitModule(L.LightningModule):
         self.log_dict(
             {
                 "val_loss": val_loss,
-                "val_NLL": xout["loss_nll"].mean(),
+                "val_NLL": xout["loss_nll"],
                 "val_KL": xout["loss_kl"],
                 "val_scale_KL": xout["scale_kl_div"],
             }
@@ -198,7 +199,7 @@ class AbismalLitModule(L.LightningModule):
         self.log_dict(
             {
                 "test_loss": test_loss,
-                "test_NLL": xout["loss_nll"].mean(),
+                "test_NLL": xout["loss_nll"],
                 "test_KL": xout["loss_kl"],
                 "test_scale_KL": xout["scale_kl_div"],
             }
