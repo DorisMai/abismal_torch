@@ -478,6 +478,17 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cloudpickle"
+version = "3.1.2"
+description = "Pickler class to extend the standard pickle.Pickler functionality"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "cloudpickle-3.1.2-py3-none-any.whl", hash = "sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a"},
+    {file = "cloudpickle-3.1.2.tar.gz", hash = "sha256:7fda9eb655c9c230dab534f1983763de5835249750e85fbcef43aaa30a9a2414"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1362,6 +1373,24 @@ MarkupSafe = ">=2.0"
 
 [package.extras]
 i18n = ["Babel (>=2.7)"]
+
+[[package]]
+name = "joblib"
+version = "1.6.0"
+description = "Lightweight pipelining with Python functions"
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "joblib-1.6.0-py3-none-any.whl", hash = "sha256:3dbbf9f6e4b592a2357b854608e980fe6390d131d7a82f011a377ef2ebef7aba"},
+    {file = "joblib-1.6.0.tar.gz", hash = "sha256:2ccc96785b12046c08fd6d55839c12857831b54a3c1673ffadd2f04bfc4eda03"},
+]
+
+[package.dependencies]
+cloudpickle = ">=3.0"
+
+[package.extras]
+docs = ["distributed", "lz4", "matplotlib", "numpy", "numpydoc", "pandas", "psutil", "pydata-sphinx-theme", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx-gallery", "tqdm"]
+test = ["distributed", "lz4", "memory_profiler", "numpy", "pytest", "pytest-asyncio", "pytest-cov", "pytest-run-parallel", "pytest-timeout", "threadpoolctl"]
 
 [[package]]
 name = "jsbeautifier"
@@ -3468,26 +3497,27 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "reciprocalspaceship"
-version = "1.0.6"
+version = "1.0.8"
 description = "Tools for exploring reciprocal space"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "reciprocalspaceship-1.0.6-py3-none-any.whl", hash = "sha256:457bf5382e8d8c10bff776ad5fc662180f4ddc5ab1f18fb4887d99bb2fe63a0b"},
-    {file = "reciprocalspaceship-1.0.6.tar.gz", hash = "sha256:f9a36a25cd50b46639a411d460aa7982c89a7c7e0dd20b5648cd5dcfee94e512"},
+    {file = "reciprocalspaceship-1.0.8-py3-none-any.whl", hash = "sha256:9071fc6ea33406720a5e66442aa43e49db93c03cd8ebdf84e05e26c902fc1efc"},
+    {file = "reciprocalspaceship-1.0.8.tar.gz", hash = "sha256:d2cb863930a337677e62904009bc3adaf7a625b0539be9edf400a9d8e2a57f73"},
 ]
 
 [package.dependencies]
-gemmi = ">=0.7.0,<=0.7.3"
+gemmi = ">=0.7.0,<=0.7.5"
 ipython = "*"
+joblib = "*"
 msgpack = "*"
 numpy = "*"
-pandas = ">=2.2.2,<=2.2.3"
+pandas = ">=2.2.2,<=2.3.3"
 scipy = "*"
 setuptools = "*"
 
 [package.extras]
-dev = ["pytest", "pytest-cov", "pytest-xdist", "ray"]
+dev = ["pytest", "pytest-cov", "pytest-xdist"]
 doc = ["autodocsumm", "celluloid", "jupyter", "matplotlib", "nbsphinx", "scikit-image", "seaborn", "sphinx", "sphinx-design", "sphinx_rtd_theme", "sphinxcontrib-autoprogram", "tqdm"]
 examples = ["celluloid", "jupyter", "matplotlib", "scikit-image", "seaborn", "tqdm"]
 
