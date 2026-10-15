@@ -17,7 +17,7 @@ matplotlib = ">=3.9.0"
 jsonargparse = {version = ">=4.27.7", extras = ["signatures"]}
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.0.0"
+black = "^26.0.0"
 isort = "^6.0.0"
 pytest = "^8.3.3"
 pytest-cov = "^6.0.0"
