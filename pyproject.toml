@@ -19,7 +19,7 @@ jsonargparse = {version = ">=4.27.7", extras = ["signatures"]}
 [tool.poetry.group.dev.dependencies]
 black = "^25.0.0"
 isort = "^6.0.0"
-pytest = "^8.3.3"
+pytest = "^9.0.0"
 pytest-cov = "^6.0.0"
 pre-commit = "^4.0.0"
 mkdocs = "^1.6.1"
